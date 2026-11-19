@@ -17,14 +17,16 @@ enum PatientsRoute: Hashable {
 
 /// The doctor's patient list: search, assigned / all-authorised filter, and a row per patient.
 struct PatientsListView: View {
-    @Environment(AppState.self) private var appState
     @Binding private var path: [PatientsRoute]
-    @State private var model = PatientsModel()
+    /// Loaded by the owner before this tab first appears. If the rows arrive after the List's first layout,
+    /// the navigation bar starts collapsed (small centred title) instead of showing the large title.
+    private let model: PatientsModel
     @State private var searchText: String
     @State private var filter: PatientFilter = .assignedToMe
 
-    init(path: Binding<[PatientsRoute]>, searchText: String = "") {
+    init(path: Binding<[PatientsRoute]>, model: PatientsModel, searchText: String = "") {
         _path = path
+        self.model = model
         _searchText = State(initialValue: searchText)
     }
 
@@ -32,21 +34,9 @@ struct PatientsListView: View {
         NavigationStack(path: $path) {
             let visiblePatients = model.patients(for: filter, matching: searchText)
 
-            List(visiblePatients) { patient in
-                NavigationLink(value: PatientsRoute.record(patientId: patient.id)) {
-                    PatientRow(patient: patient, latestStudy: model.latestStudy(for: patient.id))
-                }
-                .listRowBackground(Theme.card)
-            }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
-            .overlay {
-                if model.hasLoaded && visiblePatients.isEmpty {
-                    emptyState
-                }
-            }
-            .safeAreaInset(edge: .top) {
+            // The filter and empty state live inside the List (not in a safe-area inset or overlay)
+            // so the List stays the navigation bar's scroll view and the large title and search bar show.
+            List {
                 Picker("Filter", selection: $filter) {
                     ForEach(PatientFilter.allCases) { filter in
                         Text(filter.title).tag(filter)
@@ -54,20 +44,33 @@ struct PatientsListView: View {
                 }
                 .pickerStyle(.segmented)
                 .accessibilityLabel("Patient filter")
-                .padding(.horizontal, Theme.Spacing.m)
-                .padding(.vertical, Theme.Spacing.s)
-                .background(Theme.background)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+
+                if model.hasLoaded && visiblePatients.isEmpty {
+                    emptyState
+                        .listRowBackground(Color.clear)
+                } else {
+                    Section {
+                        ForEach(visiblePatients) { patient in
+                            NavigationLink(value: PatientsRoute.record(patientId: patient.id)) {
+                                PatientRow(patient: patient, latestStudy: model.latestStudy(for: patient.id))
+                            }
+                            .listRowBackground(Theme.card)
+                        }
+                    }
+                }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
             .navigationTitle("Patients")
-            .searchable(text: $searchText, prompt: "Name or hospital number")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $searchText,
+                        placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: "Search name or hospital number")
             .navigationDestination(for: PatientsRoute.self) { route in
                 destination(for: route)
-            }
-        }
-        // On the stack, not the list, so it also runs when Home pushes a record before the list has appeared.
-        .task {
-            if !model.hasLoaded {
-                model.load(from: appState.dataService, doctorId: appState.currentUser?.id)
             }
         }
     }
@@ -158,22 +161,19 @@ extension Study {
 
 #Preview("List") {
     @Previewable @State var path: [PatientsRoute] = []
-    PatientsListView(path: $path)
-        .environment(AppState(currentUser: MockDataService().doctorUser))
+    PatientsListView(path: $path, model: .demo())
         .tint(Theme.doctorAccent)
 }
 
 #Preview("Empty search") {
     @Previewable @State var path: [PatientsRoute] = []
-    PatientsListView(path: $path, searchText: "Zed")
-        .environment(AppState(currentUser: MockDataService().doctorUser))
+    PatientsListView(path: $path, model: .demo(), searchText: "Zed")
         .tint(Theme.doctorAccent)
 }
 
 #Preview("List, dark mode") {
     @Previewable @State var path: [PatientsRoute] = []
-    PatientsListView(path: $path)
-        .environment(AppState(currentUser: MockDataService().doctorUser))
+    PatientsListView(path: $path, model: .demo())
         .tint(Theme.doctorAccent)
         .preferredColorScheme(.dark)
 }

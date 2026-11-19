@@ -92,4 +92,12 @@ final class PatientsModel {
     func consultations(for patientId: String) -> [MDTSession] {
         consultationsByPatient[patientId] ?? []
     }
+
+    /// Loaded with the mock data for the demo doctor, for previews.
+    static func demo() -> PatientsModel {
+        let model = PatientsModel()
+        let service = MockDataService()
+        model.load(from: service, doctorId: service.doctorUser.id)
+        return model
+    }
 }

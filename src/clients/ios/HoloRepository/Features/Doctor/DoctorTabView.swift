@@ -11,8 +11,10 @@ import SwiftUI
 struct DoctorTabView: View {
     enum Tab: Hashable { case home, patients, imaging, reports }
 
+    @Environment(AppState.self) private var appState
     @State private var selection: Tab = .home
     @State private var patientsPath: [PatientsRoute] = []
+    @State private var patientsModel = PatientsModel()
 
     var body: some View {
         TabView(selection: $selection) {
@@ -24,7 +26,7 @@ struct DoctorTabView: View {
                 .tabItem { Label("Home", systemImage: "house") }
                 .tag(Tab.home)
 
-            PatientsListView(path: $patientsPath)
+            PatientsListView(path: $patientsPath, model: patientsModel)
                 .tabItem { Label("Patients", systemImage: "person.2") }
                 .tag(Tab.patients)
 
@@ -37,6 +39,12 @@ struct DoctorTabView: View {
                 .tag(Tab.reports)
         }
         .tint(Theme.doctorAccent)
+        // Load patients while Home is showing, so the Patients list has its rows before it first appears.
+        .onAppear {
+            if !patientsModel.hasLoaded {
+                patientsModel.load(from: appState.dataService, doctorId: appState.currentUser?.id)
+            }
+        }
     }
 }
 

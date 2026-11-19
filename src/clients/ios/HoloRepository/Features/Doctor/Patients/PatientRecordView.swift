@@ -187,23 +187,16 @@ private extension MDTSessionStatus {
 
 // MARK: - Previews
 
-private func previewModel() -> PatientsModel {
-    let model = PatientsModel()
-    let service = MockDataService()
-    model.load(from: service, doctorId: service.doctorUser.id)
-    return model
-}
-
 #Preview("Record") {
     NavigationStack {
-        PatientRecordView(patientId: "p-001", model: previewModel())
+        PatientRecordView(patientId: "p-001", model: .demo())
     }
     .tint(Theme.doctorAccent)
 }
 
 #Preview("Record, dark mode") {
     NavigationStack {
-        PatientRecordView(patientId: "p-002", model: previewModel())
+        PatientRecordView(patientId: "p-002", model: .demo())
     }
     .tint(Theme.doctorAccent)
     .preferredColorScheme(.dark)
