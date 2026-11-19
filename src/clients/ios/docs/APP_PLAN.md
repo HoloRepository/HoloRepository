@@ -1,0 +1,209 @@
+# HoloRepository Mobile App: Feature Plan
+
+## Overview
+
+- **Purpose:** check that the planned app matches the project vision before prompting Claude to build the foundation.
+- **Platforms:** native iOS (Swift / SwiftUI) and Android (Kotlin / Jetpack Compose).
+- **Two deadlines:**
+  - **December:** the full app flow and UI components in place for the prototype demo (mock data).
+  - **March:** the finished app with advanced features connected to the real backend.
+- **Two roles:** doctor / clinician and patient. Each has its own dashboard and bottom navigation.
+
+---
+
+## Design and UI
+
+### Style
+- **Minimal, native iOS:** standard SwiftUI components, plenty of white space, no gradients or heavy shadows.
+- **Theme:** follows the phone's light / dark setting. The 3D viewer background is always dark.
+- **Devices for December:** iPhone. Android follows the same design; tablet layouts come later.
+
+### Colour
+| Use | Light | Dark |
+| --- | --- | --- |
+| Doctor accent (blue) | #2F6FD6 | #5B93EE |
+| Patient accent (teal) | #13877F | #3CC4B8 |
+| Background | #F7F9FC | #0F1520 |
+| Cards | #FFFFFF | #182131 |
+| Card border | #E3E8EF | #263246 |
+| 3D viewer background | #0E1420 | #070A10 |
+| Approved / verified | #2E9E5B | #5FCB8A |
+| Requires review / AI draft | #D99A1E | #F0B94A |
+| Errors | #C8382F | #F07468 |
+| Lesion (3D view only, never UI) | #FF2D95 | #FF2D95 |
+
+- The accent is used only for the main action, links and the selected tab. Everything else is neutral.
+- Status colours are used only where they carry meaning.
+
+### Text
+- **Doctor app:** SF Pro (system font), Dynamic Type text styles, regular and semibold only.
+- **Patient app:** SF Pro Rounded, one text size larger, plain language.
+- Numbers (volumes, dates) use monospaced digits.
+
+### Components and layout
+- **Bottom tabs:** icons with text labels, 4 tabs per role.
+- **Doctor Home:** summary cards (pending tasks, MDT sessions, recent activity), each with a count and 2–3 items.
+- **3D viewer (phone):** the model fills the screen; structures, markers and notes open in a bottom sheet.
+- **Patient view button:** on the doctor's 3D viewer, switches the same phone to the simple patient view to show a patient their scan in clinic.
+- **Lists:** inset grouped lists. **Cards:** radius 16, thin border. **Buttons:** radius 12, one main button per screen.
+- **Spacing:** steps of 8 (8, 16, 24, 32).
+- **Icons:** SF Symbols.
+- **Tap targets:** at least 44 pt.
+
+---
+
+## 1. Sign-in and role access
+
+### Flow
+1. **Login page:** choose "Doctor / Clinician" or "Patient".
+2. **Sign in:**
+   - Doctor: email and password.
+   - Patient: registered credentials.
+3. **Authentication and role check:** the backend verifies the account's identity, status and permissions.
+4. **Dashboard:** opens the doctor or patient dashboard.
+
+### Patient account creation
+1. A hospital or clinical administrator creates the patient account.
+2. The patient receives an invitation (SMS or email).
+3. The patient activates their account.
+4. The patient signs in.
+
+> Patient access must be linked to a **verified patient identity and the correct clinical record**, not just an email address. This matters when two patients share a name, or when family members share an email account.
+
+### December
+- Login page with role choice
+- Sign-in screens (doctor: email and password; patient: registered credentials)
+- Role-based routing to the correct dashboard
+- Patient invitation and activation screens
+
+### March
+- Biometric login (Face ID / Android BiometricPrompt)
+- Multi-factor authentication for doctors
+- Password reset through verified contact details
+- Account lockout after repeated failed attempts
+- Invitation expiry and resend
+- Audit logs for account creation and access
+
+---
+
+## 2. Doctor / clinician app
+
+**Bottom navigation:** Home · Patients · Imaging · Reports
+
+Meetings don't get their own tab. They appear in:
+- Home → Upcoming consultations
+- Home → Active MDT sessions
+- Patients → Patient-specific consultation history
+
+### 2.1 Home
+- Welcome greeting
+- Recent activity
+- Pending tasks
+- Notifications
+- Upcoming MDT consultations and active MDT sessions
+
+### 2.2 Patients
+- Search patients
+- View assigned patients
+- Access clinical records
+- Browse each patient's scan history
+- Patient-specific consultation history
+
+### 2.3 Imaging
+- Study list with CT / MRI / X-ray filter
+- 3D viewer (WebView): rotate, zoom with limits, reset
+- Structures: show/hide, isolate, volumes, opacity
+- Tap the model → add a marker → add a comment (saved on the device)
+- "Share with patient" on a marker
+- "Patient view" button: switches the viewer to the simple patient view on the same phone
+- Sync markers to the MDT session
+
+### 2.4 Reports
+- AI-generated MDT summaries
+- Clinical reports
+- Patient-friendly explanations
+- Report editing and approval
+
+### March
+- **Live annotations:** view annotations from other clinicians in real time.
+- **AI clinical assistant and reporting:**
+  - Consultation transcription
+  - AI clinical summary
+  - Report viewing, editing and approval
+  - SNOMED-CT references
+  - NICE guideline references
+  - Patient summary
+  - Evidence traceability
+  - AI verification interface, with three labels:
+    - **Verified reference:** linked to an identifiable clinical source.
+    - **Requires review:** an AI-generated finding that needs clinician verification.
+    - **AI-generated:** automatically generated content that hasn't been approved yet.
+
+    These labels show real verification states, not invented AI confidence scores.
+- **Doctor profile and settings:**
+  - Professional role and department
+  - Account security and biometric authentication
+  - Notification preferences
+  - Device management
+  - Connected hospital / edge server status
+  - Log out
+
+---
+
+## 3. Patient app
+
+**Bottom navigation:** Home · My Scans · My Reports · Appointments
+
+> Patients only see scans, annotations and reports that have been authorised for patient access.
+
+### 3.1 Home
+- Welcome greeting
+- Next appointment
+- Recent activity
+- Notifications
+
+### 3.2 My Scans
+1. Scans library
+2. Select an available scan
+3. Scan overview: date, type, short description
+4. Embedded 3D viewer (WebView)
+5. Guided exploration
+6. View the approved report
+
+### 3.3 My Reports
+1. Patient-friendly explanations
+2. Report history
+3. View the linked scan
+4. Share or export as PDF (WhatsApp or email)
+
+### 3.4 Appointments
+1. Upcoming and previous appointments
+2. Appointment date, time and department
+3. Appointment details and reminders
+4. Relevant consultation information
+
+### March
+- **Notifications** for new scans, approved reports and upcoming appointments, without any sensitive medical information.
+- **Family and caregiver access:**
+  - Invite trusted family members or carers
+  - Accept invitations
+  - Choose what is shared: selected scans, approved reports, appointment information
+  - Set access levels and expiry dates
+  - Revoke access
+- **Patient profile and settings:**
+  - Personal details and verified contact information
+  - Biometric login
+  - Notification preferences
+  - Accessibility and language settings
+- **Accessibility:** adjustable text size, clear language, screen-reader support, simple navigation.
+
+---
+
+## 4. Open questions
+
+- Who builds the authentication backend: invitations, MFA, lockout and audit logs?
+- How are SMS and email invitations sent, given the on-premise, no-cloud design?
+- Is sharing reports by PDF through WhatsApp or email allowed? It moves patient data outside hospital systems, so check with Dr Rafiq.
+- Marker sync to MDT sessions needs the daemon's WebSocket. Is it ready by December, or does it move to March?
+- Where does appointment data come from? Hospital booking systems aren't part of the brief, so it may stay as mock data.
+- Family and caregiver access: what consent and safeguarding rules apply?
