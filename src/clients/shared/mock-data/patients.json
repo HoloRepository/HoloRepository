@@ -1,0 +1,46 @@
+[
+  {
+    "id": "p-001",
+    "name": "Alex Patel",
+    "dateOfBirth": "1984-03-12T09:00",
+    "sex": "male",
+    "hospitalNumber": "HR0004821",
+    "assignedDoctorId": "u-doc-001",
+    "authorisedDoctorIds": ["u-doc-001", "u-doc-002"],
+    "conditions": ["Small liver lesion (right lobe), under surveillance", "Type 2 diabetes, diet controlled"],
+    "previousProcedures": ["Laparoscopic cholecystectomy (2019)"]
+  },
+  {
+    "id": "p-002",
+    "name": "Jordan Lee",
+    "dateOfBirth": "1971-09-02T09:00",
+    "sex": "female",
+    "hospitalNumber": "HR0007315",
+    "assignedDoctorId": "u-doc-001",
+    "authorisedDoctorIds": ["u-doc-001"],
+    "conditions": ["Pulmonary nodule, 6 mm, left upper lobe", "Ex-smoker (20 pack-years)"],
+    "previousProcedures": ["Bronchoscopy (2024)"]
+  },
+  {
+    "id": "p-003",
+    "name": "Morgan Hughes",
+    "dateOfBirth": "1995-06-27T09:00",
+    "sex": "other",
+    "hospitalNumber": "HR0002694",
+    "assignedDoctorId": "u-doc-002",
+    "authorisedDoctorIds": ["u-doc-001", "u-doc-002"],
+    "conditions": ["Distal radius fracture, left wrist"],
+    "previousProcedures": ["Closed reduction and cast, left wrist (October 2026)"]
+  },
+  {
+    "id": "p-004",
+    "name": "Riley Evans",
+    "dateOfBirth": "1962-01-18T09:00",
+    "sex": "female",
+    "hospitalNumber": "HR0009150",
+    "assignedDoctorId": "u-doc-002",
+    "authorisedDoctorIds": ["u-doc-002"],
+    "conditions": ["Osteoarthritis, right knee"],
+    "previousProcedures": []
+  }
+]

@@ -7,10 +7,11 @@
 
 import Foundation
 
-/// Whether an MDT (multidisciplinary team) session is scheduled or running now.
+/// Whether an MDT (multidisciplinary team) session is scheduled, running now or finished.
 enum MDTSessionStatus: String, Codable, Hashable, Sendable {
     case scheduled
     case active
+    case completed
 }
 
 /// An MDT consultation about one patient's case.

@@ -78,15 +78,28 @@ extension View {
 struct StatusBadge: View {
     enum Kind { case approved, pending }
     let kind: Kind
+    /// Overrides the default "Approved" / "AI draft" text.
+    var text: String? = nil
 
     var body: some View {
         let color = kind == .approved ? Theme.approved : Theme.pending
-        Text(kind == .approved ? "Approved" : "AI draft")
+        Text(text ?? (kind == .approved ? "Approved" : "AI draft"))
             .font(.caption.weight(.semibold))
             .foregroundStyle(color)
             .padding(.horizontal, Theme.Spacing.s)
             .padding(.vertical, Theme.Spacing.xs)
             .background(color.opacity(0.15), in: Capsule())
+    }
+}
+
+extension StatusBadge {
+    /// Badge showing a report's real verification state.
+    init(state: VerificationState) {
+        switch state {
+        case .verified: self.init(kind: .approved, text: "Verified reference")
+        case .requiresReview: self.init(kind: .pending, text: "Requires review")
+        case .aiGenerated: self.init(kind: .pending, text: "AI-generated")
+        }
     }
 }
 

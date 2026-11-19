@@ -1,0 +1,12 @@
+[
+  { "id": "act-001", "patientId": "p-001", "kind": "scanUploaded",
+    "title": "New CT abdomen scan uploaded", "timestamp": { "minutesFromNow": -20 } },
+  { "id": "act-002", "patientId": "p-002", "kind": "commentAdded",
+    "title": "Comment added on CT chest", "timestamp": { "minutesFromNow": -120 } },
+  { "id": "act-003", "patientId": "p-001", "kind": "reportApproved",
+    "title": "CT abdomen report approved", "timestamp": { "minutesFromNow": -300 } },
+  { "id": "act-004", "patientId": "p-003", "kind": "scanUploaded",
+    "title": "New wrist X-ray uploaded", "timestamp": { "minutesFromNow": -1560 } },
+  { "id": "act-005", "patientId": "p-001", "kind": "commentAdded",
+    "title": "Comment added on MRI liver", "timestamp": { "minutesFromNow": -3000 } }
+]

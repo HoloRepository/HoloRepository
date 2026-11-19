@@ -1,0 +1,4 @@
+[
+  { "id": "u-doc-001", "name": "Dr Sarah Smith", "role": "doctor" },
+  { "id": "u-pat-001", "name": "Alex Patel", "role": "patient" }
+]

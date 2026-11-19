@@ -1,20 +1,48 @@
 //
 //  MockDataService.swift
-//  
+//
 //
 //  Created by Ng Xin Ning on 18/11/2026.
 //
 
 import Foundation
 
-/// Hard-coded demo data for the December prototype. No network calls.
-/// All names and numbers are fake. A DaemonService with the same interface replaces this later.
+/// Demo data for the December prototype, decoded from the JSON files in Resources/MockData.
+/// Those files are copies of src/clients/shared/mock-data (shared with Android); keep them identical.
+/// All names and numbers are fake. No network calls. A DaemonService with the same interface replaces this later.
+///
+/// Notes on the data:
+/// - p-001 and p-002 are assigned to the demo doctor; p-003 is a colleague's patient the demo doctor may view.
+///   p-004 is not authorised for the demo doctor and must never appear in their app.
+/// - The active MDT session, upcoming MDTs, activity and notifications use relative dates
+///   so the demo always shows a live session, future meetings and "2 h ago" style times.
 struct MockDataService: Sendable {
+    let doctorUser: User
+    let patientUser: User
+    let patients: [Patient]
+    let studies: [Study]
+    let reports: [Report]
+    let appointments: [Appointment]
+    let doctorTasks: [DoctorTask]
+    let mdtSessions: [MDTSession]
+    let activityItems: [ActivityItem]
+    let notifications: [AppNotification]
 
-    // MARK: Users
-
-    let doctorUser = User(id: "u-doc-001", name: "Dr Sarah Smith", role: .doctor)
-    let patientUser = User(id: "u-pat-001", name: "Alex Patel", role: .patient)
+    /// Decodes every file now; relative dates are resolved against `now`.
+    init(bundle: Bundle = .main, now: Date = .now) {
+        let decoder = MockDataDecoder(bundle: bundle, now: now)
+        let users: [User] = decoder.decode("users")
+        doctorUser = decoder.require(users.first { $0.role == .doctor }, "a doctor in users.json")
+        patientUser = decoder.require(users.first { $0.role == .patient }, "a patient in users.json")
+        patients = decoder.decode("patients")
+        studies = decoder.decode("studies")
+        reports = decoder.decode("reports")
+        appointments = decoder.decode("appointments")
+        doctorTasks = decoder.decode("tasks")
+        mdtSessions = decoder.decode("mdt_sessions")
+        activityItems = decoder.decode("activity")
+        notifications = decoder.decode("notifications")
+    }
 
     /// The demo account to sign in as for a role (any credentials are accepted).
     func demoUser(for role: UserRole) -> User {
@@ -23,56 +51,100 @@ struct MockDataService: Sendable {
         case .patient: patientUser
         }
     }
-
-    // MARK: Patients
-
-    let patients: [Patient] = [
-        Patient(id: "p-001", name: "Alex Patel", dateOfBirth: date(1984, 3, 12), hospitalNumber: "HR0000101"),
-        Patient(id: "p-002", name: "Jordan Lee", dateOfBirth: date(1971, 9, 2), hospitalNumber: "HR0000102"),
-        Patient(id: "p-003", name: "Morgan Hughes", dateOfBirth: date(1995, 6, 27), hospitalNumber: "HR0000103")
-    ]
-
-    // MARK: Studies
-
-    let studies: [Study] = [
-        Study(id: "s-001", patientId: "p-001", modality: .ct, bodyPart: "Abdomen",
-              date: date(2026, 11, 10), description: "CT abdomen with contrast"),
-        Study(id: "s-002", patientId: "p-001", modality: .mri, bodyPart: "Liver",
-              date: date(2026, 8, 4), description: "MRI liver follow-up"),
-        Study(id: "s-003", patientId: "p-002", modality: .ct, bodyPart: "Chest",
-              date: date(2026, 11, 3), description: "CT chest, routine"),
-        Study(id: "s-004", patientId: "p-003", modality: .xray, bodyPart: "Left wrist",
-              date: date(2026, 10, 21), description: "X-ray left wrist after fall")
-    ]
-
-    // MARK: Reports
-
-    let reports: [Report] = [
-        Report(id: "r-001", patientId: "p-001", studyId: "s-001", title: "CT abdomen report",
-               summary: "Small lesion in the right lobe of the liver, unchanged since the last scan.",
-               createdAt: date(2026, 11, 12), verificationState: .verified, approvedForPatient: true),
-        Report(id: "r-002", patientId: "p-001", studyId: "s-002", title: "MRI liver MDT summary",
-               summary: "AI-drafted MDT summary awaiting clinician review.",
-               createdAt: date(2026, 8, 6), verificationState: .requiresReview, approvedForPatient: false),
-        Report(id: "r-003", patientId: "p-002", studyId: "s-003", title: "CT chest report",
-               summary: "AI-generated draft. Not yet reviewed.",
-               createdAt: date(2026, 11, 4), verificationState: .aiGenerated, approvedForPatient: false)
-    ]
-
-    // MARK: Appointments
-
-    let appointments: [Appointment] = [
-        Appointment(id: "a-001", patientId: "p-001", date: date(2026, 12, 3, 10, 30),
-                    department: "Hepatology", clinicianName: "Dr Sarah Smith"),
-        Appointment(id: "a-002", patientId: "p-001", date: date(2026, 11, 12, 14, 0),
-                    department: "Radiology", clinicianName: "Dr Sarah Smith"),
-        Appointment(id: "a-003", patientId: "p-002", date: date(2026, 12, 8, 9, 0),
-                    department: "Respiratory", clinicianName: "Dr Sarah Smith")
-    ]
 }
 
-/// Builds a fixed date for mock data.
-private func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int = 9, _ minute: Int = 0) -> Date {
-    let components = DateComponents(year: year, month: month, day: day, hour: hour, minute: minute)
-    return Calendar(identifier: .gregorian).date(from: components) ?? .distantPast
+// MARK: - Decoding
+
+/// Loads mock JSON from the bundle. Dates may be written as:
+/// - a fixed local date and time: `"2026-11-10T09:00"`
+/// - days from today at a local time: `{ "daysFromNow": 2, "time": "14:00" }`
+/// - minutes from now: `{ "minutesFromNow": -15 }`
+/// Mock data ships with the app, so a missing or malformed file is a programming error and stops the app.
+private struct MockDataDecoder {
+    let bundle: Bundle
+    let now: Date
+    private let calendar = Calendar(identifier: .gregorian)
+
+    init(bundle: Bundle, now: Date) {
+        self.bundle = bundle
+        self.now = now
+    }
+
+    func decode<T: Decodable>(_ name: String) -> T {
+        let url = bundle.url(forResource: name, withExtension: "json")
+            ?? bundle.url(forResource: name, withExtension: "json", subdirectory: "MockData")
+        guard let url else {
+            fatalError("Mock data file \(name).json is missing from the app bundle.")
+        }
+        do {
+            let decoder = JSONDecoder()
+            let now = now
+            let calendar = calendar
+            decoder.dateDecodingStrategy = .custom { decoder in
+                try MockDate.decode(from: decoder, now: now, calendar: calendar)
+            }
+            return try decoder.decode(T.self, from: Data(contentsOf: url))
+        } catch {
+            fatalError("Could not decode \(name).json: \(error)")
+        }
+    }
+
+    func require<T>(_ value: T?, _ description: String) -> T {
+        guard let value else { fatalError("Mock data needs \(description).") }
+        return value
+    }
+}
+
+/// The relative date object form.
+private struct RelativeMockDate: Decodable {
+    var daysFromNow: Int?
+    /// "HH:mm", local time. Used with `daysFromNow`.
+    var time: String?
+    var minutesFromNow: Int?
+}
+
+private enum MockDate {
+    static func decode(from decoder: Decoder, now: Date, calendar: Calendar) throws -> Date {
+        let container = try decoder.singleValueContainer()
+
+        if let text = try? container.decode(String.self) {
+            guard let date = fixedDate(text, calendar: calendar) else {
+                throw DecodingError.dataCorruptedError(in: container,
+                    debugDescription: "Expected a date like \"2026-11-10T09:00\", got \"\(text)\".")
+            }
+            return date
+        }
+
+        let relative = try container.decode(RelativeMockDate.self)
+        if let minutes = relative.minutesFromNow {
+            return now.addingTimeInterval(TimeInterval(minutes * 60))
+        }
+        if let days = relative.daysFromNow {
+            let (hour, minute) = try time(relative.time ?? "09:00", in: container)
+            let day = calendar.date(byAdding: .day, value: days, to: calendar.startOfDay(for: now)) ?? now
+            return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+        }
+        throw DecodingError.dataCorruptedError(in: container,
+            debugDescription: "A relative date needs \"minutesFromNow\" or \"daysFromNow\".")
+    }
+
+    /// "yyyy-MM-ddTHH:mm" in the device's time zone.
+    private static func fixedDate(_ text: String, calendar: Calendar) -> Date? {
+        let parts = text.split(separator: "T")
+        guard parts.count == 2 else { return nil }
+        let day = parts[0].split(separator: "-").compactMap { Int($0) }
+        let clock = parts[1].split(separator: ":").compactMap { Int($0) }
+        guard day.count == 3, clock.count == 2 else { return nil }
+        let components = DateComponents(year: day[0], month: day[1], day: day[2], hour: clock[0], minute: clock[1])
+        return calendar.date(from: components)
+    }
+
+    private static func time(_ text: String, in container: SingleValueDecodingContainer) throws -> (Int, Int) {
+        let clock = text.split(separator: ":").compactMap { Int($0) }
+        guard clock.count == 2 else {
+            throw DecodingError.dataCorruptedError(in: container,
+                debugDescription: "Expected a time like \"14:00\", got \"\(text)\".")
+        }
+        return (clock[0], clock[1])
+    }
 }

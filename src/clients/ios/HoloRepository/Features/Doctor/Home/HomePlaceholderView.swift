@@ -7,15 +7,16 @@
 
 import SwiftUI
 
-/// Temporary detail screen pushed from Home until the real screens are built.
+/// Temporary detail screen pushed from Home and Patients until the real screens are built.
 struct HomePlaceholderView: View {
     let title: String
+    var message: String = "Coming next"
 
     var body: some View {
         ContentUnavailableView {
             Label(title, systemImage: "hammer")
         } description: {
-            Text("Coming next")
+            Text(message)
         }
         .background(Theme.background)
         .navigationTitle(title)

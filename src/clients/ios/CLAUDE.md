@@ -37,6 +37,7 @@ HoloRepository/
 ```
 - New screens go in `Features/<Role>/<Tab>/`. One view per file, named after the screen.
 - Shared mock data and the viewer bundle also live in `../shared/` for Android; keep copies in `Resources/` identical.
+- After editing shared mock data, run scripts/sync-shared.sh.
 
 ## Roles and navigation
 - Sign-in → role check → doctor or patient tabs (RootView decides).

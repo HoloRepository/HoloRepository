@@ -23,3 +23,23 @@ struct Study: Codable, Identifiable, Hashable, Sendable {
     let date: Date
     let description: String
 }
+
+// MARK: - Display helpers
+
+extension Modality {
+    var displayName: String {
+        switch self {
+        case .ct: "CT"
+        case .mri: "MRI"
+        case .xray: "X-ray"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .ct: "cube"
+        case .mri: "square.stack.3d.up"
+        case .xray: "rectangle.portrait"
+        }
+    }
+}

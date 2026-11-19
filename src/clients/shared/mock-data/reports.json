@@ -1,0 +1,14 @@
+[
+  { "id": "r-001", "patientId": "p-001", "studyId": "s-001", "title": "CT abdomen report",
+    "summary": "Small lesion in the right lobe of the liver, unchanged since the last scan.",
+    "createdAt": "2026-11-12T09:00", "verificationState": "verified", "approvedForPatient": true },
+  { "id": "r-002", "patientId": "p-001", "studyId": "s-002", "title": "MRI liver MDT summary",
+    "summary": "AI-drafted MDT summary awaiting clinician review.",
+    "createdAt": "2026-08-06T09:00", "verificationState": "requiresReview", "approvedForPatient": false },
+  { "id": "r-003", "patientId": "p-002", "studyId": "s-003", "title": "CT chest report",
+    "summary": "AI-generated draft. Not yet reviewed.",
+    "createdAt": "2026-11-04T09:00", "verificationState": "aiGenerated", "approvedForPatient": false },
+  { "id": "r-004", "patientId": "p-003", "studyId": "s-006", "title": "CT wrist report",
+    "summary": "Distal radius fracture in good position after reduction.",
+    "createdAt": "2026-10-24T09:00", "verificationState": "verified", "approvedForPatient": true }
+]
