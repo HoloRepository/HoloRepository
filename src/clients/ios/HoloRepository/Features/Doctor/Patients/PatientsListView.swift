@@ -96,7 +96,7 @@ struct PatientsListView: View {
         case .record(let patientId):
             PatientRecordView(patientId: patientId, model: model)
         case .study(let study):
-            HomePlaceholderView(title: study.description, message: "3D viewer coming next")
+            StudyViewerView(studyId: study.id, records: model)
         case .report(let report):
             HomePlaceholderView(title: report.title)
         case .consultation(let session):

@@ -1,0 +1,42 @@
+//
+//  Structure.swift
+//
+//
+//  Created by Ng Xin Ning on 19/11/2026.
+//
+
+import Foundation
+
+/// Anatomical group of a segmented structure. Case order is the display order (lesions first).
+enum StructureGroup: String, Codable, Hashable, Sendable, CaseIterable, Identifiable {
+    case lesions
+    case organs
+    case vessels
+    case bones
+    case muscles
+
+    var id: Self { self }
+
+    var displayName: String {
+        switch self {
+        case .lesions: "Lesions"
+        case .organs: "Organs"
+        case .vessels: "Vessels"
+        case .bones: "Bones"
+        case .muscles: "Muscles"
+        }
+    }
+
+    /// Lesions always stay fully opaque so they can't be faded out by mistake.
+    var hasAdjustableOpacity: Bool { self != .lesions }
+}
+
+/// One segmented structure in a study's 3D model.
+struct Structure: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let group: StructureGroup
+    /// "#RRGGBB". Lesions use #FF2D95 (Theme.lesion) and nothing else does.
+    let colorHex: String
+    let volumeML: Double
+}

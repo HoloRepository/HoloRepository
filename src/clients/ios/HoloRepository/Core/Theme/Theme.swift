@@ -112,6 +112,13 @@ extension Color {
             UIColor(rgb: traits.userInterfaceStyle == .dark ? dark : light)
         })
     }
+
+    /// A colour from data, e.g. a structure's "#RRGGBB" in the 3D model. Use only for data-driven colours;
+    /// UI colours come from `Theme`. Invalid strings give grey.
+    init(hex: String) {
+        let digits = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        self.init(uiColor: UIColor(rgb: UInt32(digits, radix: 16) ?? 0x888888))
+    }
 }
 
 private extension UIColor {

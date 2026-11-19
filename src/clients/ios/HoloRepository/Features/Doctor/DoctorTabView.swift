@@ -14,6 +14,8 @@ struct DoctorTabView: View {
     @Environment(AppState.self) private var appState
     @State private var selection: Tab = .home
     @State private var patientsPath: [PatientsRoute] = []
+    @State private var imagingPath: [ImagingRoute] = []
+    /// Authorised clinical data, shared by the Patients and Imaging tabs.
     @State private var patientsModel = PatientsModel()
 
     var body: some View {
@@ -30,7 +32,7 @@ struct DoctorTabView: View {
                 .tabItem { Label("Patients", systemImage: "person.2") }
                 .tag(Tab.patients)
 
-            ImagingView()
+            StudyListView(path: $imagingPath, model: patientsModel)
                 .tabItem { Label("Imaging", systemImage: "cube") }
                 .tag(Tab.imaging)
 

@@ -23,17 +23,21 @@ enum PatientFilter: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
-/// State for the doctor's Patients tab, loaded from `MockDataService`.
-/// Holds only patients the signed-in doctor is authorised to see, and their records.
+/// Clinical data for the doctor's Patients and Imaging tabs, loaded from `MockDataService`.
+/// Holds only patients the signed-in doctor is authorised to see, and their records, so both tabs
+/// share one authorisation check.
 @Observable
 final class PatientsModel {
     private(set) var doctorId: String?
     private(set) var patients: [Patient] = []
+    /// Studies of authorised patients, newest first.
+    private(set) var allStudies: [Study] = []
     private(set) var hasLoaded = false
 
     private var studiesByPatient: [String: [Study]] = [:]
     private var reportsByPatient: [String: [Report]] = [:]
     private var consultationsByPatient: [String: [MDTSession]] = [:]
+    private var studyModelsByStudy: [String: StudyModel] = [:]
 
     func load(from service: MockDataService, doctorId: String?) {
         self.doctorId = doctorId
@@ -43,9 +47,14 @@ final class PatientsModel {
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
         let allowedIds = Set(patients.map(\.id))
-        studiesByPatient = Dictionary(grouping: service.studies.filter { allowedIds.contains($0.patientId) },
-                                      by: \.patientId)
-            .mapValues { $0.sorted { $0.date > $1.date } }
+        allStudies = service.studies
+            .filter { allowedIds.contains($0.patientId) }
+            .sorted { $0.date > $1.date }
+        studiesByPatient = Dictionary(grouping: allStudies, by: \.patientId)
+        let allowedStudyIds = Set(allStudies.map(\.id))
+        studyModelsByStudy = Dictionary(
+            service.studyModels.filter { allowedStudyIds.contains($0.studyId) }.map { ($0.studyId, $0) },
+            uniquingKeysWith: { first, _ in first })
         reportsByPatient = Dictionary(grouping: service.reports.filter { allowedIds.contains($0.patientId) },
                                       by: \.patientId)
             .mapValues { $0.sorted { $0.createdAt > $1.createdAt } }
@@ -91,6 +100,15 @@ final class PatientsModel {
     /// Newest first, so upcoming meetings are above past ones.
     func consultations(for patientId: String) -> [MDTSession] {
         consultationsByPatient[patientId] ?? []
+    }
+
+    func study(id: String) -> Study? {
+        allStudies.first { $0.id == id }
+    }
+
+    /// The study's 3D model, if it has one ("3D ready").
+    func studyModel(for studyId: String) -> StudyModel? {
+        studyModelsByStudy[studyId]
     }
 
     /// Loaded with the mock data for the demo doctor, for previews.

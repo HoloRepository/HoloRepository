@@ -27,6 +27,8 @@ struct MockDataService: Sendable {
     let mdtSessions: [MDTSession]
     let activityItems: [ActivityItem]
     let notifications: [AppNotification]
+    /// 3D models for the studies that have one.
+    let studyModels: [StudyModel]
 
     /// Decodes every file now; relative dates are resolved against `now`.
     init(bundle: Bundle = .main, now: Date = .now) {
@@ -42,6 +44,7 @@ struct MockDataService: Sendable {
         mdtSessions = decoder.decode("mdt_sessions")
         activityItems = decoder.decode("activity")
         notifications = decoder.decode("notifications")
+        studyModels = decoder.decode("study_models")
     }
 
     /// The demo account to sign in as for a role (any credentials are accepted).

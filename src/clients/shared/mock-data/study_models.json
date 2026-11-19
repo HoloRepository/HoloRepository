@@ -1,0 +1,39 @@
+[
+  {
+    "studyId": "s-001",
+    "caseName": "KiTS kidney case",
+    "structures": [
+      { "id": "kidney-tumour-right", "name": "Kidney tumour (right)", "group": "lesions", "colorHex": "#FF2D95", "volumeML": 42.6 },
+      { "id": "kidney-right", "name": "Right kidney", "group": "organs", "colorHex": "#C4704F", "volumeML": 168.0 },
+      { "id": "kidney-left", "name": "Left kidney", "group": "organs", "colorHex": "#D08A5A", "volumeML": 155.0 },
+      { "id": "liver", "name": "Liver", "group": "organs", "colorHex": "#8B3A2F", "volumeML": 1580.0 },
+      { "id": "spleen", "name": "Spleen", "group": "organs", "colorHex": "#7E4A8C", "volumeML": 182.0 },
+      { "id": "pancreas", "name": "Pancreas", "group": "organs", "colorHex": "#E3B35B", "volumeML": 78.0 },
+      { "id": "aorta-abdominal", "name": "Abdominal aorta", "group": "vessels", "colorHex": "#D64541", "volumeML": 92.0 },
+      { "id": "ivc", "name": "Inferior vena cava", "group": "vessels", "colorHex": "#3E6FD8", "volumeML": 74.0 },
+      { "id": "renal-artery-right", "name": "Right renal artery", "group": "vessels", "colorHex": "#E0634F", "volumeML": 4.1 },
+      { "id": "renal-vein-left", "name": "Left renal vein", "group": "vessels", "colorHex": "#5B7FE0", "volumeML": 6.2 },
+      { "id": "vertebra-l1", "name": "L1 vertebra", "group": "bones", "colorHex": "#E8E1CF", "volumeML": 38.0 },
+      { "id": "vertebra-l2", "name": "L2 vertebra", "group": "bones", "colorHex": "#DCD3BC", "volumeML": 41.0 },
+      { "id": "rib-right-12", "name": "Right 12th rib", "group": "bones", "colorHex": "#EFE8D6", "volumeML": 9.5 },
+      { "id": "psoas-right", "name": "Right psoas", "group": "muscles", "colorHex": "#B5523B", "volumeML": 210.0 },
+      { "id": "psoas-left", "name": "Left psoas", "group": "muscles", "colorHex": "#A84B36", "volumeML": 205.0 }
+    ],
+    "relevantStructureIDs": ["kidney-tumour-right", "kidney-right", "kidney-left", "aorta-abdominal", "ivc", "renal-artery-right"]
+  },
+  {
+    "studyId": "s-003",
+    "caseName": "Chest CT",
+    "structures": [
+      { "id": "nodule-lul", "name": "Pulmonary nodule (left upper lobe)", "group": "lesions", "colorHex": "#FF2D95", "volumeML": 0.11 },
+      { "id": "lung-right", "name": "Right lung", "group": "organs", "colorHex": "#9DB8C9", "volumeML": 2680.0 },
+      { "id": "lung-left", "name": "Left lung", "group": "organs", "colorHex": "#8EAABD", "volumeML": 2350.0 },
+      { "id": "heart", "name": "Heart", "group": "organs", "colorHex": "#B3443A", "volumeML": 620.0 },
+      { "id": "aorta-thoracic", "name": "Thoracic aorta", "group": "vessels", "colorHex": "#D64541", "volumeML": 140.0 },
+      { "id": "pulmonary-artery", "name": "Pulmonary artery", "group": "vessels", "colorHex": "#4A74D9", "volumeML": 85.0 },
+      { "id": "sternum", "name": "Sternum", "group": "bones", "colorHex": "#E8E1CF", "volumeML": 55.0 },
+      { "id": "vertebra-t5", "name": "T5 vertebra", "group": "bones", "colorHex": "#DCD3BC", "volumeML": 22.0 }
+    ],
+    "relevantStructureIDs": ["nodule-lul", "lung-left", "pulmonary-artery"]
+  }
+]

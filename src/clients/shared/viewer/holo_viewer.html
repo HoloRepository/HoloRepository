@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>HoloRepository viewer (placeholder)</title>
+<!--
+  PLACEHOLDER for the team's shared web viewer, used by the iOS and Android apps until the real
+  viewer is ready. Self-contained: no libraries, no network.
+
+  It keeps the same API as the real viewer, so the apps don't change when it's swapped in:
+    Swift/Kotlin -> JS:  HoloViewer.loadCase(case), HoloViewer.setVisible(ids),
+                         HoloViewer.resetView(), HoloViewer.setOpacity(group, value)
+    JS -> app:           {type: "ready"}, {type: "tap", id}   (id is null when tapping empty space)
+
+  case = { id, structures: [{ id, name, group, colorHex, volumeML }], visible: [ids] }
+  group = "lesions" | "organs" | "vessels" | "bones" | "muscles"
+
+  Structures are drawn as shaded spheres or tubes at rough anatomical positions, sized by volume.
+  Drag to rotate, pinch (or mouse wheel) to zoom within limits.
+  The page background is transparent; the app draws the dark viewer background behind it.
+-->
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: transparent;
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  #hint {
+    position: absolute; left: 0; right: 0; bottom: 96px; text-align: center; pointer-events: none;
+    font: 12px -apple-system, system-ui, sans-serif; color: rgba(255, 255, 255, 0.45);
+  }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="hint">Placeholder viewer · drag to rotate · pinch to zoom</div>
+<script>
+(function () {
+  "use strict";
+
+  var MIN_ZOOM = 0.6, MAX_ZOOM = 3.0;
+  var DEFAULT_VIEW = { yaw: 0.35, pitch: -0.12, zoom: 1.0 };
+  var CAMERA_DISTANCE = 3.0;
+
+  // Rough positions (x right, y up, z away from the viewer), in units of about half a torso.
+  // A point is a sphere; {from, to} is a tube. Unknown ids are placed on a ring.
+  var LAYOUT = {
+    // Abdomen (KiTS kidney case)
+    "liver":               [-0.45, 0.45, 0.0],
+    "spleen":              [0.55, 0.40, 0.25],
+    "pancreas":            [0.10, 0.15, 0.10],
+    "kidney-right":        [-0.40, -0.05, 0.45],
+    "kidney-left":         [0.40, 0.00, 0.45],
+    "kidney-tumour-right": [-0.52, -0.20, 0.38],
+    "aorta-abdominal":     { from: [0.06, 0.60, 0.35], to: [0.06, -0.60, 0.35] },
+    "ivc":                 { from: [-0.12, 0.60, 0.30], to: [-0.12, -0.60, 0.30] },
+    "renal-artery-right":  { from: [0.06, 0.00, 0.35], to: [-0.35, -0.03, 0.45] },
+    "renal-vein-left":     { from: [-0.12, 0.02, 0.30], to: [0.35, 0.02, 0.45] },
+    "vertebra-l1":         [0.0, 0.05, 0.62],
+    "vertebra-l2":         [0.0, -0.25, 0.62],
+    "rib-right-12":        { from: [-0.20, 0.25, 0.65], to: [-0.60, 0.05, 0.45] },
+    "psoas-right":         { from: [-0.15, -0.10, 0.50], to: [-0.25, -0.85, 0.30] },
+    "psoas-left":          { from: [0.15, -0.10, 0.50], to: [0.25, -0.85, 0.30] },
+    // Chest
+    "lung-right":          [-0.42, 0.15, 0.10],
+    "lung-left":           [0.42, 0.15, 0.10],
+    "heart":               [0.12, -0.18, -0.05],
+    "nodule-lul":          [0.40, 0.52, -0.05],
+    "aorta-thoracic":      { from: [0.05, 0.35, 0.15], to: [0.08, -0.70, 0.35] },
+    "pulmonary-artery":    { from: [0.05, -0.05, -0.05], to: [0.30, 0.20, 0.05] },
+    "sternum":             { from: [0.0, 0.45, -0.45], to: [0.0, -0.35, -0.50] },
+    "vertebra-t5":         [0.0, 0.10, 0.58]
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var state = {
+    structures: [], visible: {}, selectedId: null,
+    opacity: { lesions: 1, organs: 1, vessels: 1, bones: 1, muscles: 1 },
+    yaw: DEFAULT_VIEW.yaw, pitch: DEFAULT_VIEW.pitch, zoom: DEFAULT_VIEW.zoom
+  };
+  var projected = []; // last frame's drawn shapes, for tap hit-testing
+
+  function post(message) {
+    try { window.webkit.messageHandlers.holoViewer.postMessage(message); } catch (e) { /* not in the app */ }
+  }
+
+  function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
+
+  // Sphere radius from volume, so a 1.5 l liver is big and a 0.1 ml nodule is still tappable.
+  function radiusFor(structure) {
+    return 0.05 + 0.035 * Math.cbrt(Math.max(structure.volumeML || 0, 0.01));
+  }
+
+  function shapeFor(structure, index, count) {
+    var layout = LAYOUT[structure.id];
+    if (layout) { return layout; }
+    var angle = index / Math.max(count, 1) * Math.PI * 2;
+    return [Math.cos(angle) * 0.6, Math.sin(angle) * 0.6, 0];
+  }
+
+  function rotate(point) {
+    var cy = Math.cos(state.yaw), sy = Math.sin(state.yaw);
+    var cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+    var x = point[0] * cy + point[2] * sy;
+    var z = -point[0] * sy + point[2] * cy;
+    var y = point[1] * cp - z * sp;
+    return [x, y, point[1] * sp + z * cp];
+  }
+
+  function project(point) {
+    var r = rotate(point);
+    var width = canvas.clientWidth, height = canvas.clientHeight;
+    var scale = Math.min(width, height) * 0.38 * state.zoom;
+    var f = CAMERA_DISTANCE / (CAMERA_DISTANCE + r[2]);
+    return { x: width / 2 + r[0] * scale * f, y: height / 2 - r[1] * scale * f, z: r[2], f: f, scale: scale };
+  }
+
+  function rgb(hex) {
+    var value = parseInt(String(hex || "#888888").replace("#", ""), 16);
+    return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  }
+
+  function rgba(c, alpha, lighten) {
+    var k = lighten || 0;
+    var mix = function (v) { return Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k)); };
+    return "rgba(" + mix(c[0]) + "," + mix(c[1]) + "," + mix(c[2]) + "," + alpha + ")";
+  }
+
+  function draw() {
+    var width = canvas.clientWidth, height = canvas.clientHeight;
+    ctx.clearRect(0, 0, width, height);
+
+    var count = state.structures.length;
+    projected = state.structures
+      .map(function (s, i) { return { s: s, shape: shapeFor(s, i, count) }; })
+      .filter(function (item) { return state.visible[item.s.id]; })
+      .map(function (item) {
+        var r = radiusFor(item.s);
+        if (Array.isArray(item.shape)) {
+          var c = project(item.shape);
+          return { s: item.s, kind: "sphere", c: c, r: r * c.scale * c.f, z: c.z };
+        }
+        var a = project(item.shape.from), b = project(item.shape.to);
+        return { s: item.s, kind: "tube", a: a, b: b, w: r * a.scale * (a.f + b.f) * 0.3, z: (a.z + b.z) / 2 };
+      })
+      .sort(function (p, q) { return q.z - p.z; }); // far to near
+
+    projected.forEach(function (p) {
+      var color = rgb(p.s.colorHex);
+      var alpha = p.s.group === "lesions" ? 1 : clamp(state.opacity[p.s.group] == null ? 1 : state.opacity[p.s.group], 0, 1);
+      if (alpha <= 0.01) { return; }
+      var selected = p.s.id === state.selectedId;
+
+      if (p.kind === "sphere") {
+        var g = ctx.createRadialGradient(p.c.x - p.r * 0.35, p.c.y - p.r * 0.35, p.r * 0.1, p.c.x, p.c.y, p.r);
+        g.addColorStop(0, rgba(color, alpha, 0.45));
+        g.addColorStop(0.7, rgba(color, alpha, 0));
+        g.addColorStop(1, rgba(color, alpha, -0.45));
+        ctx.beginPath();
+        ctx.arc(p.c.x, p.c.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        if (selected) { ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.stroke(); }
+      } else {
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(p.a.x, p.a.y);
+        ctx.lineTo(p.b.x, p.b.y);
+        if (selected) { ctx.lineWidth = p.w + 6; ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.stroke(); }
+        ctx.lineWidth = p.w;
+        ctx.strokeStyle = rgba(color, alpha, 0);
+        ctx.stroke();
+        ctx.lineWidth = Math.max(p.w * 0.35, 1);
+        ctx.strokeStyle = rgba(color, alpha * 0.8, 0.4);
+        ctx.stroke();
+      }
+    });
+  }
+
+  function distanceToSegment(px, py, a, b) {
+    var dx = b.x - a.x, dy = b.y - a.y;
+    var t = clamp(((px - a.x) * dx + (py - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
+    return Math.hypot(px - (a.x + t * dx), py - (a.y + t * dy));
+  }
+
+  // Front-most visible structure under the point, or null.
+  function hitTest(x, y) {
+    for (var i = projected.length - 1; i >= 0; i--) {
+      var p = projected[i];
+      var alpha = p.s.group === "lesions" ? 1 : state.opacity[p.s.group];
+      if (alpha != null && alpha <= 0.01) { continue; }
+      var slop = 6;
+      var hit = p.kind === "sphere"
+        ? Math.hypot(x - p.c.x, y - p.c.y) <= p.r + slop
+        : distanceToSegment(x, y, p.a, p.b) <= p.w / 2 + slop;
+      if (hit) { return p.s.id; }
+    }
+    return null;
+  }
+
+  function resize() {
+    var ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(canvas.clientWidth * ratio);
+    canvas.height = Math.round(canvas.clientHeight * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    draw();
+  }
+
+  // Gestures: one finger rotates, two fingers pinch-zoom, a short tap selects.
+  var pointers = {};
+  var gesture = null;
+
+  function pointerList() { return Object.keys(pointers).map(function (k) { return pointers[k]; }); }
+
+  canvas.addEventListener("pointerdown", function (e) {
+    canvas.setPointerCapture(e.pointerId);
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var list = pointerList();
+    if (list.length === 1) {
+      gesture = { type: "rotate", startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: 0 };
+    } else if (list.length === 2) {
+      gesture = { type: "pinch", startDistance: Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y), startZoom: state.zoom, moved: 99 };
+    }
+  });
+
+  canvas.addEventListener("pointermove", function (e) {
+    if (!pointers[e.pointerId] || !gesture) { return; }
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (gesture.type === "rotate") {
+      var dx = e.clientX - gesture.lastX, dy = e.clientY - gesture.lastY;
+      gesture.lastX = e.clientX; gesture.lastY = e.clientY;
+      gesture.moved = Math.max(gesture.moved, Math.hypot(e.clientX - gesture.startX, e.clientY - gesture.startY));
+      state.yaw += dx * 0.01;
+      state.pitch = clamp(state.pitch + dy * 0.01, -1.2, 1.2);
+      draw();
+    } else if (gesture.type === "pinch") {
+      var list = pointerList();
+      if (list.length < 2) { return; }
+      var distance = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
+      state.zoom = clamp(gesture.startZoom * distance / (gesture.startDistance || 1), MIN_ZOOM, MAX_ZOOM);
+      draw();
+    }
+  });
+
+  function endPointer(e) {
+    if (!pointers[e.pointerId]) { return; }
+    delete pointers[e.pointerId];
+    if (gesture && gesture.type === "rotate" && gesture.moved < 8 && e.type === "pointerup") {
+      state.selectedId = hitTest(e.clientX, e.clientY);
+      post({ type: "tap", id: state.selectedId });
+      draw();
+    }
+    if (pointerList().length === 0) { gesture = null; }
+  }
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
+
+  canvas.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    state.zoom = clamp(state.zoom * Math.exp(-e.deltaY * 0.002), MIN_ZOOM, MAX_ZOOM);
+    draw();
+  }, { passive: false });
+
+  window.addEventListener("resize", resize);
+
+  // Public API, same as the real viewer.
+  window.HoloViewer = {
+    loadCase: function (viewerCase) {
+      state.structures = (viewerCase && viewerCase.structures) || [];
+      var ids = (viewerCase && viewerCase.visible) || state.structures.map(function (s) { return s.id; });
+      state.visible = {};
+      ids.forEach(function (id) { state.visible[id] = true; });
+      state.selectedId = null;
+      state.opacity = { lesions: 1, organs: 1, vessels: 1, bones: 1, muscles: 1 };
+      this.resetView();
+    },
+    setVisible: function (ids) {
+      state.visible = {};
+      (ids || []).forEach(function (id) { state.visible[id] = true; });
+      if (state.selectedId && !state.visible[state.selectedId]) { state.selectedId = null; }
+      draw();
+    },
+    resetView: function () {
+      state.yaw = DEFAULT_VIEW.yaw; state.pitch = DEFAULT_VIEW.pitch; state.zoom = DEFAULT_VIEW.zoom;
+      draw();
+    },
+    setOpacity: function (group, value) {
+      if (group === "lesions") { return; } // lesions always stay fully visible
+      state.opacity[group] = clamp(Number(value), 0, 1);
+      draw();
+    }
+  };
+
+  resize();
+  post({ type: "ready" });
+})();
+</script>
+</body>
+</html>
