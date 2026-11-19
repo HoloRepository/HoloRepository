@@ -15,11 +15,16 @@ struct StudyViewerView: View {
     @State private var isShowingStructures = false
 
     /// Looks the study up in the doctor's authorised records, so unauthorised studies can't be opened.
+    /// Every CT study has a 3D model (segmented by NV-Segment-CT).
     init(studyId: String, records: PatientsModel) {
         let study = records.study(id: studyId)
         self.study = study
         patient = study.flatMap { records.patient(id: $0.patientId) }
-        _viewerModel = State(initialValue: records.studyModel(for: studyId).map { StudyViewerModel(studyModel: $0) })
+        _viewerModel = State(initialValue: study.flatMap { study in
+            records.studyModel(for: studyId).map {
+                StudyViewerModel(studyModel: $0, region: study.bodyPart.lowercased())
+            }
+        })
     }
 
     var body: some View {
@@ -27,8 +32,8 @@ struct StudyViewerView: View {
             Theme.viewerBackground
                 .ignoresSafeArea()
 
-            if let study, let patient {
-                viewer(study: study, patient: patient)
+            if let study, let patient, let viewerModel {
+                viewer(study: study, patient: patient, viewerModel: viewerModel)
                 header(study: study, patient: patient)
             } else {
                 ContentUnavailableView("Study not available", systemImage: "lock",
@@ -80,22 +85,16 @@ struct StudyViewerView: View {
         }
     }
 
-    @ViewBuilder
-    private func viewer(study: Study, patient: Patient) -> some View {
-        if let viewerModel, ModelWebView.viewerURL != nil {
-            ModelWebView(bridge: viewerModel.bridge,
-                         accessibilityText: "3D model of \(patient.name)'s \(study.shortName)")
-                .ignoresSafeArea()
-                .onAppear { viewerModel.loadInViewer() }
-                .overlay {
-                    if !viewerModel.bridge.isReady {
-                        ProgressView("Loading 3D model…")
-                    }
+    private func viewer(study: Study, patient: Patient, viewerModel: StudyViewerModel) -> some View {
+        ModelWebView(bridge: viewerModel.bridge,
+                     accessibilityText: "3D model of \(patient.name)'s \(study.shortName)")
+            .ignoresSafeArea()
+            .onAppear { viewerModel.loadInViewer() }
+            .overlay {
+                if !viewerModel.bridge.isReady {
+                    ProgressView("Loading 3D model…")
                 }
-        } else {
-            ContentUnavailableView("No 3D model yet", systemImage: "cube.transparent",
-                                   description: Text("This study doesn't have a 3D model."))
-        }
+            }
     }
 
     private func header(study: Study, patient: Patient) -> some View {
@@ -136,9 +135,9 @@ struct StudyViewerView: View {
     .tint(Theme.doctorAccent)
 }
 
-#Preview("Viewer, no 3D model") {
+#Preview("Viewer, chest") {
     NavigationStack {
-        StudyViewerView(studyId: "s-002", records: .demo())
+        StudyViewerView(studyId: "s-003", records: .demo())
     }
     .tint(Theme.doctorAccent)
 }

@@ -1,6 +1,6 @@
 [
   { "id": "n-001", "patientId": "p-003", "kind": "newScan",
-    "title": "New X-ray ready to view", "timestamp": { "minutesFromNow": -40 }, "isRead": false },
+    "title": "New CT ready to view", "timestamp": { "minutesFromNow": -40 }, "isRead": false },
   { "id": "n-002", "patientId": "p-002", "kind": "comment",
     "title": "New comment on CT chest report", "timestamp": { "minutesFromNow": -180 }, "isRead": false },
   { "id": "n-003", "patientId": "p-002", "kind": "meetingInvitation",

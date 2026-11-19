@@ -61,23 +61,16 @@ struct PatientRecordView: View {
             }
             ForEach(studies) { study in
                 NavigationLink(value: PatientsRoute.study(study)) {
-                    HStack(spacing: Theme.Spacing.m) {
-                        Image(systemName: study.modality.systemImage)
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        Text(study.description)
                             .font(.body)
-                            .foregroundStyle(Theme.doctorAccent)
-                            .frame(minWidth: Theme.Spacing.l)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                            Text(study.description)
-                                .font(.body)
-                            Text("\(study.modality.displayName) · \(study.date, format: .dateTime.day().month(.abbreviated).year())")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
+                        Text(study.date, format: .dateTime.day().month(.abbreviated).year())
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                     .frame(minHeight: 44)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(study.modality.displayName) scan, \(study.description), \(study.date.formatted(date: .long, time: .omitted))")
+                    .accessibilityLabel("\(study.description), \(study.date.formatted(date: .long, time: .omitted))")
                 }
                 .accessibilityHint("Opens the 3D viewer")
             }

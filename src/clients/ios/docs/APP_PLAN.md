@@ -8,6 +8,7 @@
   - **December:** the full app flow and UI components in place for the prototype demo (mock data).
   - **March:** the finished app with advanced features connected to the real backend.
 - **Two roles:** doctor / clinician and patient. Each has its own dashboard and bottom navigation.
+- **Imaging scope: CT only.** The daemon segments CT scans (DICOM) with NVIDIA NV-Segment-CT, so every study in the app is a CT with a 3D model. The brief only requires DICOM in general; other modalities can be added later (the `Modality` type is kept for that).
 
 ---
 
@@ -110,9 +111,9 @@ Meetings don't get their own tab. They appear in:
 - Patient-specific consultation history
 
 ### 2.3 Imaging
-- Study list with CT / MRI / X-ray filter
+- CT study list with search (patient or exam); no modality filter. Every study is 3D-ready.
 - 3D viewer (WebView): rotate, zoom with limits, reset
-- Structures: show/hide, isolate, volumes, opacity
+- Structures: show/hide, isolate, volumes, opacity. Structures are NV-Segment-CT labels, grouped as lesions, organs, vessels, bones and muscles.
 - Tap the model → add a marker → add a comment (saved on the device)
 - "Share with patient" on a marker
 - "Patient view" button: switches the viewer to the simple patient view on the same phone
@@ -163,9 +164,9 @@ Meetings don't get their own tab. They appear in:
 - Notifications
 
 ### 3.2 My Scans
-1. Scans library
+1. Scans library (CT scans; each one has a 3D model)
 2. Select an available scan
-3. Scan overview: date, type, short description
+3. Scan overview: date, body part, short description
 4. Embedded 3D viewer (WebView)
 5. Guided exploration
 6. View the approved report

@@ -12,43 +12,16 @@ enum ImagingRoute: Hashable {
     case viewer(studyId: String)
 }
 
-/// The modality filter on the study list.
-enum StudyFilter: String, CaseIterable, Identifiable, Hashable {
-    case all, ct, mri, xray
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .all: "All"
-        case .ct: Modality.ct.displayName
-        case .mri: Modality.mri.displayName
-        case .xray: Modality.xray.displayName
-        }
-    }
-
-    func includes(_ study: Study) -> Bool {
-        switch self {
-        case .all: true
-        case .ct: study.modality == .ct
-        case .mri: study.modality == .mri
-        case .xray: study.modality == .xray
-        }
-    }
-}
-
-/// The doctor's imaging studies (authorised patients only): search, modality filter, and a row per study.
+/// The doctor's CT studies (authorised patients only), with search. Every study opens in the 3D viewer.
 struct StudyListView: View {
     @Binding private var path: [ImagingRoute]
     /// Loaded by the owner before this tab first appears (see PatientsListView for why).
     private let model: PatientsModel
     @State private var searchText: String
-    @State private var filter: StudyFilter
 
-    init(path: Binding<[ImagingRoute]>, model: PatientsModel, filter: StudyFilter = .all, searchText: String = "") {
+    init(path: Binding<[ImagingRoute]>, model: PatientsModel, searchText: String = "") {
         _path = path
         self.model = model
-        _filter = State(initialValue: filter)
         _searchText = State(initialValue: searchText)
     }
 
@@ -56,31 +29,17 @@ struct StudyListView: View {
         NavigationStack(path: $path) {
             let studies = visibleStudies
 
-            // Filter and empty state live inside the List so the large title and search bar attach to it.
+            // The empty state lives inside the List so the large title and search bar attach to it.
             List {
-                Picker("Modality", selection: $filter) {
-                    ForEach(StudyFilter.allCases) { filter in
-                        Text(filter.title).tag(filter)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .accessibilityLabel("Modality filter")
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-
                 if studies.isEmpty {
                     emptyState
                         .listRowBackground(Color.clear)
                 } else {
-                    Section {
-                        ForEach(studies) { study in
-                            NavigationLink(value: ImagingRoute.viewer(studyId: study.id)) {
-                                StudyRow(study: study,
-                                         patientName: model.patient(id: study.patientId)?.name ?? "",
-                                         has3DModel: model.studyModel(for: study.id) != nil)
-                            }
-                            .listRowBackground(Theme.card)
+                    ForEach(studies) { study in
+                        NavigationLink(value: ImagingRoute.viewer(studyId: study.id)) {
+                            StudyRow(study: study, patientName: model.patient(id: study.patientId)?.name ?? "")
                         }
+                        .listRowBackground(Theme.card)
                     }
                 }
             }
@@ -101,12 +60,11 @@ struct StudyListView: View {
         }
     }
 
-    /// After the modality filter and search (patient name or exam name).
+    /// After search (patient name or exam name).
     private var visibleStudies: [Study] {
         let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return model.allStudies }
         return model.allStudies.filter { study in
-            guard filter.includes(study) else { return false }
-            guard !query.isEmpty else { return true }
             let patientName = model.patient(id: study.patientId)?.name ?? ""
             return patientName.localizedCaseInsensitiveContains(query)
                 || study.description.localizedCaseInsensitiveContains(query)
@@ -120,11 +78,9 @@ struct StudyListView: View {
             ContentUnavailableView.search(text: searchText)
         } else {
             ContentUnavailableView {
-                Label(filter == .all ? "No studies" : "No \(filter.title) studies", systemImage: "photo.on.rectangle")
+                Label("No studies", systemImage: "photo.on.rectangle")
             } description: {
-                Text(filter == .all
-                     ? "Studies for your patients will appear here."
-                     : "None of your patients has a \(filter.title) study.")
+                Text("CT studies for your patients will appear here.")
             }
         }
     }
@@ -132,53 +88,24 @@ struct StudyListView: View {
 
 // MARK: - Row
 
-/// Modality icon, exam name, patient, date, and "3D ready" if the study has a 3D model.
+/// Exam name, patient and date.
 private struct StudyRow: View {
     let study: Study
     let patientName: String
-    let has3DModel: Bool
-
-    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 28
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.m) {
-            Image(systemName: study.modality.systemImage)
-                .font(.title3)
-                .foregroundStyle(Theme.doctorAccent)
-                .frame(width: iconWidth)
-
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(study.description)
-                    .font(.headline)
-                Text(patientName)
-                    .font(.subheadline)
-                HStack(spacing: Theme.Spacing.s) {
-                    Text("\(study.modality.displayName) · \(study.date, format: .dateTime.day().month(.abbreviated).year())")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    if has3DModel {
-                        Label("3D ready", systemImage: "cube")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, Theme.Spacing.s)
-                            .padding(.vertical, 2)
-                            .background(Theme.cardBorder, in: Capsule())
-                    }
-                }
-            }
-            // Start the row separator at the exam name, not at the "3D ready" label's text.
-            .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(study.description)
+                .font(.headline)
+            Text(patientName)
+                .font(.subheadline)
+            Text(study.date, format: .dateTime.day().month(.abbreviated).year())
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, Theme.Spacing.xs)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
-    }
-
-    private var accessibilityText: String {
-        var parts = ["\(study.modality.displayName) scan", study.description, patientName,
-                     study.date.formatted(date: .long, time: .omitted)]
-        if has3DModel { parts.append("3D ready") }
-        return parts.joined(separator: ", ")
+        .accessibilityLabel("\(study.description), \(patientName), \(study.date.formatted(date: .long, time: .omitted))")
     }
 }
 
@@ -190,12 +117,12 @@ private struct StudyRow: View {
         .tint(Theme.doctorAccent)
 }
 
-#Preview("Empty filter") {
+#Preview("No studies") {
     @Previewable @State var path: [ImagingRoute] = []
-    // No authorised patients, so the CT filter has nothing to show.
+    // No authorised patients, so there is nothing to show.
     let model = PatientsModel()
     let _ = model.load(from: MockDataService(), doctorId: nil)
-    StudyListView(path: $path, model: model, filter: .ct)
+    StudyListView(path: $path, model: model)
         .tint(Theme.doctorAccent)
 }
 

@@ -33,7 +33,9 @@ enum StructureGroup: String, Codable, Hashable, Sendable, CaseIterable, Identifi
 
 /// One segmented structure in a study's 3D model.
 struct Structure: Codable, Identifiable, Hashable, Sendable {
+    /// The NV-Segment-CT label name, exactly as the model outputs it, e.g. "kidney mass", "right kidney", "left rib 9".
     let id: String
+    /// Display name, e.g. "Kidney mass (right)".
     let name: String
     let group: StructureGroup
     /// "#RRGGBB". Lesions use #FF2D95 (Theme.lesion) and nothing else does.

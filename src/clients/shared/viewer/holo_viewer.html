@@ -13,8 +13,10 @@
                          HoloViewer.resetView(), HoloViewer.setOpacity(group, value)
     JS -> app:           {type: "ready"}, {type: "tap", id}   (id is null when tapping empty space)
 
-  case = { id, structures: [{ id, name, group, colorHex, volumeML }], visible: [ids] }
-  group = "lesions" | "organs" | "vessels" | "bones" | "muscles"
+  case = { id, region, structures: [{ id, name, group, colorHex, volumeML }], visible: [ids] }
+  id      = structure id: the NV-Segment-CT label name, e.g. "kidney mass", "right kidney", "left rib 9"
+  group   = "lesions" | "organs" | "vessels" | "bones" | "muscles"
+  region  = "abdomen" | "chest" (placeholder only: picks the position table; the real viewer uses meshes)
 
   Structures are drawn as shaded spheres or tubes at rough anatomical positions, sized by volume.
   Drag to rotate, pinch (or mouse wheel) to zoom within limits.
@@ -43,40 +45,53 @@
   var DEFAULT_VIEW = { yaw: 0.35, pitch: -0.12, zoom: 1.0 };
   var CAMERA_DISTANCE = 3.0;
 
-  // Rough positions (x right, y up, z away from the viewer), in units of about half a torso.
+  // Rough positions (x right, y up, z away from the viewer), in units of about half a torso,
+  // per body region and keyed by NV-Segment-CT label name (the structure id).
   // A point is a sphere; {from, to} is a tube. Unknown ids are placed on a ring.
   var LAYOUT = {
-    // Abdomen (KiTS kidney case)
-    "liver":               [-0.45, 0.45, 0.0],
-    "spleen":              [0.55, 0.40, 0.25],
-    "pancreas":            [0.10, 0.15, 0.10],
-    "kidney-right":        [-0.40, -0.05, 0.45],
-    "kidney-left":         [0.40, 0.00, 0.45],
-    "kidney-tumour-right": [-0.52, -0.20, 0.38],
-    "aorta-abdominal":     { from: [0.06, 0.60, 0.35], to: [0.06, -0.60, 0.35] },
-    "ivc":                 { from: [-0.12, 0.60, 0.30], to: [-0.12, -0.60, 0.30] },
-    "renal-artery-right":  { from: [0.06, 0.00, 0.35], to: [-0.35, -0.03, 0.45] },
-    "renal-vein-left":     { from: [-0.12, 0.02, 0.30], to: [0.35, 0.02, 0.45] },
-    "vertebra-l1":         [0.0, 0.05, 0.62],
-    "vertebra-l2":         [0.0, -0.25, 0.62],
-    "rib-right-12":        { from: [-0.20, 0.25, 0.65], to: [-0.60, 0.05, 0.45] },
-    "psoas-right":         { from: [-0.15, -0.10, 0.50], to: [-0.25, -0.85, 0.30] },
-    "psoas-left":          { from: [0.15, -0.10, 0.50], to: [0.25, -0.85, 0.30] },
-    // Chest
-    "lung-right":          [-0.42, 0.15, 0.10],
-    "lung-left":           [0.42, 0.15, 0.10],
-    "heart":               [0.12, -0.18, -0.05],
-    "nodule-lul":          [0.40, 0.52, -0.05],
-    "aorta-thoracic":      { from: [0.05, 0.35, 0.15], to: [0.08, -0.70, 0.35] },
-    "pulmonary-artery":    { from: [0.05, -0.05, -0.05], to: [0.30, 0.20, 0.05] },
-    "sternum":             { from: [0.0, 0.45, -0.45], to: [0.0, -0.35, -0.50] },
-    "vertebra-t5":         [0.0, 0.10, 0.58]
+    abdomen: {
+      "liver":                        [-0.45, 0.45, 0.0],
+      "spleen":                       [0.55, 0.40, 0.25],
+      "pancreas":                     [0.10, 0.15, 0.10],
+      "right kidney":                 [-0.40, -0.05, 0.45],
+      "left kidney":                  [0.40, 0.00, 0.45],
+      "kidney mass":                  [-0.52, -0.20, 0.38],
+      "aorta":                        { from: [0.06, 0.60, 0.35], to: [0.06, -0.60, 0.35] },
+      "inferior vena cava":           { from: [-0.12, 0.60, 0.30], to: [-0.12, -0.60, 0.30] },
+      "portal vein and splenic vein": { from: [-0.25, 0.25, 0.10], to: [0.45, 0.30, 0.20] },
+      "vertebrae L1":                 [0.0, 0.05, 0.62],
+      "vertebrae L2":                 [0.0, -0.25, 0.62],
+      "right rib 12":                 { from: [-0.20, 0.25, 0.65], to: [-0.60, 0.05, 0.45] },
+      "right iliopsoas":              { from: [-0.15, -0.10, 0.50], to: [-0.25, -0.85, 0.30] },
+      "left iliopsoas":               { from: [0.15, -0.10, 0.50], to: [0.25, -0.85, 0.30] }
+    },
+    chest: {
+      "right lung upper lobe":  [-0.42, 0.40, 0.05],
+      "right lung middle lobe": [-0.45, 0.02, -0.12],
+      "right lung lower lobe":  [-0.45, -0.18, 0.25],
+      "left lung upper lobe":   [0.42, 0.35, 0.05],
+      "left lung lower lobe":   [0.45, -0.12, 0.25],
+      "lung tumor":             [0.40, 0.55, -0.05],
+      "heart":                  [0.12, -0.15, -0.10],
+      "spleen":                 [0.45, -0.72, 0.25],
+      "aorta":                  { from: [0.05, 0.45, 0.15], to: [0.08, -0.75, 0.40] },
+      "pulmonary vein":         { from: [0.05, -0.05, 0.00], to: [0.32, 0.10, 0.10] },
+      "sternum":                { from: [0.0, 0.45, -0.45], to: [0.0, -0.35, -0.50] },
+      "vertebrae T5":           [0.0, 0.15, 0.60],
+      "vertebrae T9":           [0.0, -0.35, 0.62],
+      "vertebrae T10":          [0.0, -0.55, 0.62],
+      "left rib 8":             { from: [0.15, -0.22, 0.70], to: [0.98, -0.40, -0.10] },
+      "left rib 9":             { from: [0.15, -0.38, 0.70], to: [1.00, -0.56, -0.05] },
+      "left rib 10":            { from: [0.15, -0.54, 0.68], to: [0.98, -0.72, 0.00] },
+      "left rib 11":            { from: [0.15, -0.70, 0.66], to: [0.88, -0.88, 0.20] },
+      "left autochthon":        { from: [0.12, 0.10, 0.75], to: [0.12, -0.85, 0.75] }
+    }
   };
 
   var canvas = document.getElementById("view");
   var ctx = canvas.getContext("2d");
   var state = {
-    structures: [], visible: {}, selectedId: null,
+    structures: [], region: null, center: [0, 0, 0], visible: {}, selectedId: null,
     opacity: { lesions: 1, organs: 1, vessels: 1, bones: 1, muscles: 1 },
     yaw: DEFAULT_VIEW.yaw, pitch: DEFAULT_VIEW.pitch, zoom: DEFAULT_VIEW.zoom
   };
@@ -94,13 +109,31 @@
   }
 
   function shapeFor(structure, index, count) {
-    var layout = LAYOUT[structure.id];
+    var regionLayout = LAYOUT[state.region] || {};
+    var layout = regionLayout[structure.id] || LAYOUT.abdomen[structure.id] || LAYOUT.chest[structure.id];
     if (layout) { return layout; }
     var angle = index / Math.max(count, 1) * Math.PI * 2;
     return [Math.cos(angle) * 0.6, Math.sin(angle) * 0.6, 0];
   }
 
+  // Middle of all the case's shapes, so a one-sided case (e.g. left ribs only) is still centred.
+  // Uses every structure, not just visible ones, so hiding structures doesn't move the model.
+  function caseCenter() {
+    var points = [];
+    state.structures.forEach(function (s, i) {
+      var shape = shapeFor(s, i, state.structures.length);
+      if (Array.isArray(shape)) { points.push(shape); } else { points.push(shape.from, shape.to); }
+    });
+    if (points.length === 0) { return [0, 0, 0]; }
+    var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    points.forEach(function (p) {
+      for (var k = 0; k < 3; k++) { min[k] = Math.min(min[k], p[k]); max[k] = Math.max(max[k], p[k]); }
+    });
+    return [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
+  }
+
   function rotate(point) {
+    point = [point[0] - state.center[0], point[1] - state.center[1], point[2] - state.center[2]];
     var cy = Math.cos(state.yaw), sy = Math.sin(state.yaw);
     var cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
     var x = point[0] * cy + point[2] * sy;
@@ -269,6 +302,8 @@
   window.HoloViewer = {
     loadCase: function (viewerCase) {
       state.structures = (viewerCase && viewerCase.structures) || [];
+      state.region = (viewerCase && viewerCase.region) || null;
+      state.center = caseCenter();
       var ids = (viewerCase && viewerCase.visible) || state.structures.map(function (s) { return s.id; });
       state.visible = {};
       ids.forEach(function (id) { state.visible[id] = true; });

@@ -3,9 +3,9 @@
     "startTime": { "minutesFromNow": -15 }, "participantCount": 5, "status": "active" },
   { "id": "m-002", "patientId": "p-002", "caseName": "CT chest findings",
     "startTime": { "daysFromNow": 2, "time": "14:00" }, "participantCount": 4, "status": "scheduled" },
-  { "id": "m-003", "patientId": "p-003", "caseName": "Wrist fracture management",
+  { "id": "m-003", "patientId": "p-003", "caseName": "Rib fracture management",
     "startTime": { "daysFromNow": 6, "time": "10:30" }, "participantCount": 3, "status": "scheduled" },
-  { "id": "m-004", "patientId": "p-001", "caseName": "MRI liver review",
+  { "id": "m-004", "patientId": "p-001", "caseName": "Previous CT review",
     "startTime": "2026-08-12T14:00", "participantCount": 6, "status": "completed" },
   { "id": "m-005", "patientId": "p-002", "caseName": "Pulmonary nodule first review",
     "startTime": "2026-06-22T15:00", "participantCount": 4, "status": "completed" }

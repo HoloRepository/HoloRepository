@@ -29,8 +29,8 @@
     "hospitalNumber": "HR0002694",
     "assignedDoctorId": "u-doc-002",
     "authorisedDoctorIds": ["u-doc-001", "u-doc-002"],
-    "conditions": ["Distal radius fracture, left wrist"],
-    "previousProcedures": ["Closed reduction and cast, left wrist (October 2026)"]
+    "conditions": ["Fractures of left 9th and 10th ribs after a fall (October 2026)"],
+    "previousProcedures": ["Appendicectomy (2012)"]
   },
   {
     "id": "p-004",

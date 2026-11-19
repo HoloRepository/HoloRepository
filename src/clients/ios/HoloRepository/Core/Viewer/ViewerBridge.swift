@@ -28,8 +28,10 @@ final class ViewerBridge {
 
     // MARK: Swift → JS
 
-    func loadCase(_ model: StudyModel, visibleIDs: [String]) {
-        let payload = ViewerCasePayload(id: model.studyId, structures: model.structures, visible: visibleIDs)
+    /// `region` is the study's body part, e.g. "abdomen" (the placeholder viewer uses it to lay out structures).
+    func loadCase(_ model: StudyModel, region: String, visibleIDs: [String]) {
+        let payload = ViewerCasePayload(id: model.studyId, region: region, structures: model.structures,
+                                        visible: visibleIDs)
         tappedStructureID = nil
         send("HoloViewer.loadCase(\(json(payload)))")
     }
@@ -98,6 +100,7 @@ final class ViewerBridge {
 /// The case object passed to `HoloViewer.loadCase`.
 private struct ViewerCasePayload: Encodable {
     let id: String
+    let region: String
     let structures: [Structure]
     let visible: [String]
 }

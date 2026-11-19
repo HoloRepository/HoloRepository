@@ -151,7 +151,7 @@ private struct PatientRow: View {
 }
 
 extension Study {
-    /// e.g. "CT abdomen", "X-ray left wrist".
+    /// e.g. "CT abdomen", "CT chest".
     var shortName: String {
         "\(modality.displayName) \(bodyPart.lowercased())"
     }

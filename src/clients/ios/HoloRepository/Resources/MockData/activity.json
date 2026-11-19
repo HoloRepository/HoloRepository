@@ -6,7 +6,7 @@
   { "id": "act-003", "patientId": "p-001", "kind": "reportApproved",
     "title": "CT abdomen report approved", "timestamp": { "minutesFromNow": -300 } },
   { "id": "act-004", "patientId": "p-003", "kind": "scanUploaded",
-    "title": "New wrist X-ray uploaded", "timestamp": { "minutesFromNow": -1560 } },
+    "title": "New chest CT uploaded", "timestamp": { "minutesFromNow": -1560 } },
   { "id": "act-005", "patientId": "p-001", "kind": "commentAdded",
-    "title": "Comment added on MRI liver", "timestamp": { "minutesFromNow": -3000 } }
+    "title": "Comment added on CT abdomen MDT summary", "timestamp": { "minutesFromNow": -3000 } }
 ]

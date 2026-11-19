@@ -15,7 +15,7 @@ struct ModelWebView: UIViewRepresentable {
     /// Read by VoiceOver, e.g. "3D model of Alex Patel's CT abdomen".
     let accessibilityText: String
 
-    /// The bundled viewer page, or nil if it's missing from the app.
+    /// The bundled viewer page (synced from shared/viewer by scripts/sync-shared.sh).
     static var viewerURL: URL? {
         Bundle.main.url(forResource: "holo_viewer", withExtension: "html")
             ?? Bundle.main.url(forResource: "holo_viewer", withExtension: "html", subdirectory: "Viewer")
@@ -46,6 +46,8 @@ struct ModelWebView: UIViewRepresentable {
         bridge.attach(webView)
         if let url = Self.viewerURL {
             webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        } else {
+            assertionFailure("holo_viewer.html is missing from the app bundle. Run scripts/sync-shared.sh.")
         }
         return webView
     }

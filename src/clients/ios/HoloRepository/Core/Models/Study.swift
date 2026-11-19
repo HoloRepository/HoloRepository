@@ -1,20 +1,19 @@
 //
 //  Study.swift
-//  
+//
 //
 //  Created by Ng Xin Ning on 18/11/2026.
 //
 
 import Foundation
 
-/// Imaging modality, used for the CT / MRI / X-ray filter.
+/// Imaging modality. CT only for now: the daemon segments CT with NVIDIA NV-Segment-CT.
+/// Kept as a type so other modalities can be added later.
 enum Modality: String, Codable, Hashable, Sendable {
     case ct
-    case mri
-    case xray
 }
 
-/// One imaging study (scan) for a patient.
+/// One imaging study (scan) for a patient. Every study has a 3D model (`StudyModel`).
 struct Study: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let patientId: String
@@ -27,19 +26,10 @@ struct Study: Codable, Identifiable, Hashable, Sendable {
 // MARK: - Display helpers
 
 extension Modality {
+    /// Used in scan names such as "CT abdomen".
     var displayName: String {
         switch self {
         case .ct: "CT"
-        case .mri: "MRI"
-        case .xray: "X-ray"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .ct: "cube"
-        case .mri: "square.stack.3d.up"
-        case .xray: "rectangle.portrait"
         }
     }
 }

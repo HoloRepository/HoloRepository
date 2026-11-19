@@ -13,13 +13,16 @@ import Observation
 @Observable
 final class StudyViewerModel {
     let studyModel: StudyModel
+    /// Body region for the viewer, e.g. "abdomen".
+    let region: String
     let bridge: ViewerBridge
 
     private(set) var visibleIDs: Set<String>
     private(set) var opacity: [StructureGroup: Double]
 
-    init(studyModel: StudyModel, bridge: ViewerBridge = ViewerBridge()) {
+    init(studyModel: StudyModel, region: String, bridge: ViewerBridge = ViewerBridge()) {
         self.studyModel = studyModel
+        self.region = region
         self.bridge = bridge
         visibleIDs = Set(studyModel.structures.map(\.id))
         opacity = Dictionary(uniqueKeysWithValues: StructureGroup.allCases.map { ($0, 1.0) })
@@ -44,7 +47,7 @@ final class StudyViewerModel {
 
     /// Sends the model to the viewer. Queued by the bridge until the page is ready.
     func loadInViewer() {
-        bridge.loadCase(studyModel, visibleIDs: orderedVisibleIDs)
+        bridge.loadCase(studyModel, region: region, visibleIDs: orderedVisibleIDs)
         for group in StructureGroup.allCases where group.hasAdjustableOpacity && opacity[group] != 1 {
             bridge.setOpacity(group, opacity[group] ?? 1)
         }

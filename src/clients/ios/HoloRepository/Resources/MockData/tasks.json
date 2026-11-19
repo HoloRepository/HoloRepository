@@ -1,8 +1,8 @@
 [
-  { "id": "t-001", "patientId": "p-001", "kind": "reviewReport", "title": "Review MRI liver MDT summary",
-    "reportId": "r-002", "studyId": "s-002", "verificationState": "requiresReview" },
+  { "id": "t-001", "patientId": "p-001", "kind": "reviewReport", "title": "Review CT abdomen MDT summary",
+    "reportId": "r-002", "studyId": "s-001", "verificationState": "requiresReview" },
   { "id": "t-002", "patientId": "p-002", "kind": "reviewReport", "title": "Review CT chest report",
     "reportId": "r-003", "studyId": "s-003", "verificationState": "aiGenerated" },
-  { "id": "t-003", "patientId": "p-003", "kind": "checkMarkers", "title": "Check markers on wrist X-ray",
-    "reportId": null, "studyId": "s-004", "verificationState": null }
+  { "id": "t-003", "patientId": "p-003", "kind": "checkMarkers", "title": "Check markers on chest CT",
+    "reportId": null, "studyId": "s-006", "verificationState": null }
 ]

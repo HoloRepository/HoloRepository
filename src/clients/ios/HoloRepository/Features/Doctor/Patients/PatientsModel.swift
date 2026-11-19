@@ -106,7 +106,7 @@ final class PatientsModel {
         allStudies.first { $0.id == id }
     }
 
-    /// The study's 3D model, if it has one ("3D ready").
+    /// The study's 3D model. Every study should have one; nil means the mock data is incomplete.
     func studyModel(for studyId: String) -> StudyModel? {
         studyModelsByStudy[studyId]
     }

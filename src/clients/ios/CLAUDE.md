@@ -49,8 +49,11 @@ HoloRepository/
 
 ## 3D viewer
 The 3D model is the team's shared web viewer inside a `WKWebView`. Never rebuild 3D natively. Talk to it only through `ViewerBridge`:
-- Swift → JS: `HoloViewer.loadCase(case)`, `HoloViewer.setVisible(ids)`, `HoloViewer.resetView()`
+- Swift → JS: `HoloViewer.loadCase(case)`, `HoloViewer.setVisible(ids)`, `HoloViewer.resetView()`, `HoloViewer.setOpacity(group, value)`
 - JS → Swift: `{type: "ready"}`, `{type: "tap", id}`
+- **CT only.** The daemon segments CT with NVIDIA NV-Segment-CT. Every study is 3D-ready: no modality filter, no modality icons, no "no 3D model" state. Keep the `Modality` type (just `.ct`) so other modalities can be added later.
+- Structure IDs are NV-Segment-CT label names exactly as the model outputs them (e.g. `"kidney mass"`, `"right kidney"`, `"left rib 9"`); `name` is the display name. Don't invent IDs for structures the model doesn't segment.
+- Structure groups: lesions, organs, vessels, bones, muscles. Lesions are always #FF2D95 (`Theme.lesion`) and nothing else uses that colour.
 - On a phone the model fills the screen; structures, markers and notes open in a bottom sheet (`.presentationDetents([.medium, .large])`).
 - Doctor viewer has a "Patient view" button that switches to the simple patient view on the same phone.
 - Markers ("tap model → marker → comment") are saved on the device in December, with a "Share with patient" toggle.

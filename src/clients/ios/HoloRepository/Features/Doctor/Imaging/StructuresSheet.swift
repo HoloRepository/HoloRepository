@@ -148,7 +148,7 @@ private extension Structure {
     Color.clear
         .sheet(isPresented: .constant(true)) {
             if let studyModel = service.studyModels.first {
-                StructuresSheet(model: StudyViewerModel(studyModel: studyModel))
+                StructuresSheet(model: StudyViewerModel(studyModel: studyModel, region: "abdomen"))
                     .presentationDetents([.medium, .large])
             }
         }
@@ -159,7 +159,7 @@ private extension Structure {
     Color.clear
         .sheet(isPresented: .constant(true)) {
             if let studyModel = service.studyModels.first {
-                StructuresSheet(model: StudyViewerModel(studyModel: studyModel))
+                StructuresSheet(model: StudyViewerModel(studyModel: studyModel, region: "abdomen"))
                     .presentationDetents([.medium, .large])
             }
         }

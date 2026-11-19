@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// The 3D model (segmentation) for a study. Only studies with one are "3D ready".
+/// The 3D model for a CT study: NV-Segment-CT segmentation. Every study has one.
 struct StudyModel: Codable, Identifiable, Hashable, Sendable {
     let studyId: String
     /// Source case, e.g. "KiTS kidney case".
