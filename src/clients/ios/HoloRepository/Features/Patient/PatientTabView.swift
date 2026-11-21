@@ -1,20 +1,24 @@
 //
 //  PatientTabView.swift
-//  
+//
 //
 //  Created by Ng Xin Ning on 18/11/2026.
 //
 
 import SwiftUI
 
-/// Bottom tabs for the patient app. Rounded text throughout.
+/// Bottom tabs for the patient app. Teal tint, rounded text, one text size larger.
 struct PatientTabView: View {
+    @Environment(AppState.self) private var appState
+    /// The patient's own approved content, shared by Home and My Scans.
+    @State private var contentModel = PatientContentModel()
+
     var body: some View {
         TabView {
-            PatientHomeView()
+            PatientHomeView(model: contentModel)
                 .tabItem { Label("Home", systemImage: "house") }
 
-            MyScansView()
+            MyScansView(model: contentModel)
                 .tabItem { Label("My Scans", systemImage: "cube") }
 
             MyReportsView()
@@ -23,8 +27,13 @@ struct PatientTabView: View {
             AppointmentsView()
                 .tabItem { Label("Appointments", systemImage: "calendar") }
         }
-        .tint(Theme.patientAccent)
-        .fontDesign(.rounded)
+        .patientStyle()
+        .onAppear {
+            if !contentModel.hasLoaded {
+                contentModel.load(from: appState.dataService, reportStore: appState.reportStore,
+                                  user: appState.currentUser)
+            }
+        }
     }
 }
 

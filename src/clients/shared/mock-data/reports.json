@@ -1,14 +1,70 @@
 [
-  { "id": "r-001", "patientId": "p-001", "studyId": "s-001", "title": "CT abdomen report",
-    "summary": "Small lesion in the right lobe of the liver, unchanged since the last scan.",
-    "createdAt": "2026-11-12T09:00", "verificationState": "verified", "approvedForPatient": true },
-  { "id": "r-002", "patientId": "p-001", "studyId": "s-001", "title": "CT abdomen MDT summary",
-    "summary": "AI-drafted MDT summary awaiting clinician review.",
-    "createdAt": "2026-11-13T09:00", "verificationState": "requiresReview", "approvedForPatient": false },
-  { "id": "r-003", "patientId": "p-002", "studyId": "s-003", "title": "CT chest report",
-    "summary": "AI-generated draft. Not yet reviewed.",
-    "createdAt": "2026-11-04T09:00", "verificationState": "aiGenerated", "approvedForPatient": false },
-  { "id": "r-004", "patientId": "p-003", "studyId": "s-006", "title": "CT chest report",
+  {
+    "id": "r-001", "patientId": "p-001", "studyId": "s-001", "title": "CT abdomen report",
+    "summary": "Mass in the lower pole of the right kidney, about 4.3 cm. No spread to nearby veins.",
+    "createdAt": "2026-11-12T09:00", "verificationState": "verified", "approvedForPatient": true,
+    "findings": [
+      { "id": "r-001-f1", "text": "Solid enhancing mass in the lower pole of the right kidney, about 4.3 cm (42.6 ml).",
+        "verificationState": "verified", "source": "Radiology report, 10 Nov" },
+      { "id": "r-001-f2", "text": "No invasion of the renal vein or inferior vena cava.",
+        "verificationState": "verified", "source": "Radiology report, 10 Nov" },
+      { "id": "r-001-f3", "text": "Left kidney normal in size and appearance.",
+        "verificationState": "verified", "source": "Radiology report, 10 Nov" }
+    ],
+    "impression": "Right renal mass, most likely a renal cell carcinoma. Localised, with no signs of spread on this scan.",
+    "recommendations": "Discuss at the urology MDT. Consider partial nephrectomy. Staging CT of the chest.",
+    "patientSummary": "Your scan showed a lump on your right kidney. It is about the size of a golf ball. It has not spread to the big blood vessels next to it. Your other kidney looks healthy. Your care team will meet to talk about the best way to treat it. They will talk with you about it too.",
+    "approvedBy": "Dr Sarah Smith", "approvedAt": "2026-11-12T16:20"
+  },
+  {
+    "id": "r-002", "patientId": "p-001", "studyId": "s-001", "title": "CT abdomen MDT summary",
+    "summary": "Draft MDT summary for the right kidney mass, awaiting clinician review.",
+    "createdAt": "2026-11-13T09:00", "verificationState": "requiresReview", "approvedForPatient": false,
+    "findings": [
+      { "id": "r-002-f1", "text": "Kidney mass volume 42.6 ml on segmentation.",
+        "verificationState": "aiGenerated", "source": null },
+      { "id": "r-002-f2", "text": "Mass appears confined to the kidney (suggests stage T1b).",
+        "verificationState": "requiresReview", "source": null },
+      { "id": "r-002-f3", "text": "Type 2 diabetes, diet controlled.",
+        "verificationState": "verified", "source": "Clinical record, 3 Oct" }
+    ],
+    "impression": "Localised right renal mass, suitable for discussion of surgery.",
+    "recommendations": "Urology review for partial nephrectomy. Kidney function blood tests before surgery.",
+    "patientSummary": "The team looked at your scan together. The lump is only in your right kidney. The doctors think an operation to take out the lump could be a good choice. You will have a blood test first to check how well your kidneys work.",
+    "approvedBy": null, "approvedAt": null
+  },
+  {
+    "id": "r-003", "patientId": "p-002", "studyId": "s-003", "title": "CT chest report",
+    "summary": "Small nodule in the left upper lobe. Draft, not yet reviewed.",
+    "createdAt": "2026-11-04T09:00", "verificationState": "aiGenerated", "approvedForPatient": false,
+    "findings": [
+      { "id": "r-003-f1", "text": "6 mm solid nodule in the left upper lobe.",
+        "verificationState": "verified", "source": "Radiology report, 3 Nov" },
+      { "id": "r-003-f2", "text": "No new nodules compared with the review in June 2026.",
+        "verificationState": "aiGenerated", "source": null },
+      { "id": "r-003-f3", "text": "No enlarged lymph nodes in the chest.",
+        "verificationState": "aiGenerated", "source": null }
+    ],
+    "impression": "Small, stable lung nodule. Low risk.",
+    "recommendations": "Follow-up CT of the chest in 12 months.",
+    "patientSummary": "Your scan showed a very small spot on your left lung. It is smaller than a pea. It looks the same as before, which is a good sign. You will have another scan in one year to check on it.",
+    "approvedBy": null, "approvedAt": null
+  },
+  {
+    "id": "r-004", "patientId": "p-003", "studyId": "s-006", "title": "CT chest report",
     "summary": "Undisplaced fractures of the left 9th and 10th ribs. No pneumothorax.",
-    "createdAt": "2026-10-22T09:00", "verificationState": "verified", "approvedForPatient": true }
+    "createdAt": "2026-10-22T09:00", "verificationState": "verified", "approvedForPatient": true,
+    "findings": [
+      { "id": "r-004-f1", "text": "Undisplaced fractures of the left 9th and 10th ribs.",
+        "verificationState": "verified", "source": "Radiology report, 21 Oct" },
+      { "id": "r-004-f2", "text": "No pneumothorax and no fluid around the lungs.",
+        "verificationState": "verified", "source": "Radiology report, 21 Oct" },
+      { "id": "r-004-f3", "text": "Spleen intact.",
+        "verificationState": "verified", "source": "Radiology report, 21 Oct" }
+    ],
+    "impression": "Simple rib fractures. No injury to the lungs or spleen.",
+    "recommendations": "Pain relief and breathing exercises. Review in clinic in 6 weeks.",
+    "patientSummary": "Your scan showed two cracked ribs on your left side. Your lungs and the organs under your ribs are not hurt. The ribs will heal by themselves in about six weeks. Pain medicine and deep breaths will help you get better.",
+    "approvedBy": "Dr Priya Shah", "approvedAt": "2026-10-22T15:10"
+  }
 ]
