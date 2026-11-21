@@ -15,7 +15,8 @@ struct DoctorTabView: View {
     @State private var selection: Tab = .home
     @State private var patientsPath: [PatientsRoute] = []
     @State private var imagingPath: [ImagingRoute] = []
-    /// Authorised clinical data, shared by the Patients and Imaging tabs.
+    @State private var reportsPath: [ReportsRoute] = []
+    /// Authorised clinical data, shared by the Patients, Imaging and Reports tabs.
     @State private var patientsModel = PatientsModel()
 
     var body: some View {
@@ -36,15 +37,16 @@ struct DoctorTabView: View {
                 .tabItem { Label("Imaging", systemImage: "cube") }
                 .tag(Tab.imaging)
 
-            ReportsView()
+            ReportsListView(path: $reportsPath, model: patientsModel)
                 .tabItem { Label("Reports", systemImage: "doc.text") }
                 .tag(Tab.reports)
         }
         .tint(Theme.doctorAccent)
-        // Load patients while Home is showing, so the Patients list has its rows before it first appears.
+        // Load while Home is showing, so the other tabs have their data before they first appear.
         .onAppear {
             if !patientsModel.hasLoaded {
-                patientsModel.load(from: appState.dataService, doctorId: appState.currentUser?.id)
+                patientsModel.load(from: appState.dataService, reportStore: appState.reportStore,
+                                   doctorId: appState.currentUser?.id)
             }
         }
     }

@@ -20,11 +20,13 @@ final class StudyViewerModel {
     private(set) var visibleIDs: Set<String>
     private(set) var opacity: [StructureGroup: Double]
 
-    init(studyModel: StudyModel, region: String, bridge: ViewerBridge = ViewerBridge()) {
+    /// `showingRelevantOnly` starts with only the relevant structures visible (the patient's guided view).
+    init(studyModel: StudyModel, region: String, bridge: ViewerBridge = ViewerBridge(),
+         showingRelevantOnly: Bool = false) {
         self.studyModel = studyModel
         self.region = region
         self.bridge = bridge
-        visibleIDs = Set(studyModel.structures.map(\.id))
+        visibleIDs = Set(showingRelevantOnly ? studyModel.relevantStructureIDs : studyModel.structures.map(\.id))
         opacity = Dictionary(uniqueKeysWithValues: StructureGroup.allCases.map { ($0, 1.0) })
     }
 
@@ -35,8 +37,13 @@ final class StudyViewerModel {
 
     /// Name of the structure last tapped in the 3D view, or nil once it's hidden (the viewer clears it too).
     var tappedStructureName: String? {
+        tappedStructure?.name
+    }
+
+    /// The structure last tapped in the 3D view, or nil once it's hidden.
+    var tappedStructure: Structure? {
         guard let id = bridge.tappedStructureID, visibleIDs.contains(id) else { return nil }
-        return studyModel.structures.first { $0.id == id }?.name
+        return studyModel.structures.first { $0.id == id }
     }
 
     func isVisible(_ structure: Structure) -> Bool {

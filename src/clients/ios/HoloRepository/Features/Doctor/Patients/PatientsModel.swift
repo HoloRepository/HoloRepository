@@ -23,24 +23,29 @@ enum PatientFilter: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
-/// Clinical data for the doctor's Patients and Imaging tabs, loaded from `MockDataService`.
-/// Holds only patients the signed-in doctor is authorised to see, and their records, so both tabs
-/// share one authorisation check.
+/// Clinical data for the doctor's Patients, Imaging and Reports tabs, loaded from `MockDataService`
+/// and the `ReportStore`. Holds only patients the signed-in doctor is authorised to see, and their records,
+/// so all three tabs share one authorisation check and see the same report approvals.
 @Observable
 final class PatientsModel {
     private(set) var doctorId: String?
     private(set) var patients: [Patient] = []
     /// Studies of authorised patients, newest first.
     private(set) var allStudies: [Study] = []
+    /// Reports of authorised patients, newest first, with saved approvals and edits.
+    private(set) var allReports: [Report] = []
     private(set) var hasLoaded = false
 
+    private var reportStore: (any ReportStore)?
     private var studiesByPatient: [String: [Study]] = [:]
-    private var reportsByPatient: [String: [Report]] = [:]
     private var consultationsByPatient: [String: [MDTSession]] = [:]
     private var studyModelsByStudy: [String: StudyModel] = [:]
 
-    func load(from service: MockDataService, doctorId: String?) {
+    /// `reportStore` nil keeps report changes in memory (previews).
+    func load(from service: MockDataService, reportStore: (any ReportStore)? = nil, doctorId: String?) {
         self.doctorId = doctorId
+        let reportStore = reportStore ?? LocalReportStore.inMemory(baseReports: service.reports)
+        self.reportStore = reportStore
         // Authorisation is the first filter: nothing else in the tab can see other patients.
         patients = service.patients
             .filter { patient in doctorId.map { patient.authorisedDoctorIds.contains($0) } ?? false }
@@ -55,9 +60,9 @@ final class PatientsModel {
         studyModelsByStudy = Dictionary(
             service.studyModels.filter { allowedStudyIds.contains($0.studyId) }.map { ($0.studyId, $0) },
             uniquingKeysWith: { first, _ in first })
-        reportsByPatient = Dictionary(grouping: service.reports.filter { allowedIds.contains($0.patientId) },
-                                      by: \.patientId)
-            .mapValues { $0.sorted { $0.createdAt > $1.createdAt } }
+        allReports = reportStore.allReports()
+            .filter { allowedIds.contains($0.patientId) }
+            .sorted { $0.createdAt > $1.createdAt }
         consultationsByPatient = Dictionary(grouping: service.mdtSessions.filter { allowedIds.contains($0.patientId) },
                                             by: \.patientId)
             .mapValues { $0.sorted { $0.startTime > $1.startTime } }
@@ -94,7 +99,32 @@ final class PatientsModel {
 
     /// Newest first.
     func reports(for patientId: String) -> [Report] {
-        reportsByPatient[patientId] ?? []
+        allReports.filter { $0.patientId == patientId }
+    }
+
+    func report(id: String) -> Report? {
+        allReports.first { $0.id == id }
+    }
+
+    // MARK: Report review
+
+    /// Approves a report for the patient and saves it.
+    func approveReport(id: String, by approver: String, at date: Date = .now) throws {
+        guard let report = report(id: id) else { return }
+        try save(report.approved(by: approver, at: date))
+    }
+
+    /// Saves edited finding texts (keyed by finding id) and patient summary.
+    func editReport(id: String, findingTexts: [String: String], patientSummary: String) throws {
+        guard let report = report(id: id) else { return }
+        try save(report.edited(findingTexts: findingTexts, patientSummary: patientSummary))
+    }
+
+    private func save(_ report: Report) throws {
+        try reportStore?.save(report)
+        if let index = allReports.firstIndex(where: { $0.id == report.id }) {
+            allReports[index] = report
+        }
     }
 
     /// Newest first, so upcoming meetings are above past ones.

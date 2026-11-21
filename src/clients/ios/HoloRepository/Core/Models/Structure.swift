@@ -37,8 +37,17 @@ struct Structure: Codable, Identifiable, Hashable, Sendable {
     let id: String
     /// Display name, e.g. "Kidney mass (right)".
     let name: String
+    /// Plain-language name for the patient app, e.g. "Main blood vessel (aorta)".
+    let patientFriendlyName: String?
+    /// One plain sentence for the patient app.
+    let patientDescription: String?
     let group: StructureGroup
     /// "#RRGGBB". Lesions use #FF2D95 (Theme.lesion) and nothing else does.
     let colorHex: String
     let volumeML: Double
+}
+
+extension Structure {
+    /// Name shown to patients; falls back to the display name.
+    var patientName: String { patientFriendlyName ?? name }
 }

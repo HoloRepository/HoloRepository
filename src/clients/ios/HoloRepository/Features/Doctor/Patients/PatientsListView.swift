@@ -98,7 +98,12 @@ struct PatientsListView: View {
         case .study(let study):
             StudyViewerView(studyId: study.id, records: model)
         case .report(let report):
-            HomePlaceholderView(title: report.title)
+            // Looked up by id, so approvals made elsewhere show here too.
+            ReportDetailView(reportId: report.id, records: model) { studyId in
+                if let study = model.study(id: studyId) {
+                    path.append(.study(study))
+                }
+            }
         case .consultation(let session):
             HomePlaceholderView(title: session.caseName)
         }

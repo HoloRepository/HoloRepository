@@ -21,6 +21,10 @@ struct Study: Codable, Identifiable, Hashable, Sendable {
     let bodyPart: String
     let date: Date
     let description: String
+    /// Plain-language name for the patient app, e.g. "Scan of your tummy".
+    let patientFriendlyName: String?
+    /// One or two plain sentences for the patient app.
+    let patientDescription: String?
 }
 
 // MARK: - Display helpers
@@ -32,4 +36,9 @@ extension Modality {
         case .ct: "CT"
         }
     }
+}
+
+extension Study {
+    /// Name shown to patients; falls back to the clinical description.
+    var patientName: String { patientFriendlyName ?? description }
 }

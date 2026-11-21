@@ -18,4 +18,6 @@ struct User: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let role: UserRole
+    /// For patient accounts: the verified clinical record (`Patient.id`) this account is linked to.
+    var patientId: String? = nil
 }

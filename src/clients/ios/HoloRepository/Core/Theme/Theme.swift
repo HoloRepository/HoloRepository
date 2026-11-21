@@ -95,11 +95,7 @@ struct StatusBadge: View {
 extension StatusBadge {
     /// Badge showing a report's real verification state.
     init(state: VerificationState) {
-        switch state {
-        case .verified: self.init(kind: .approved, text: "Verified reference")
-        case .requiresReview: self.init(kind: .pending, text: "Requires review")
-        case .aiGenerated: self.init(kind: .pending, text: "AI-generated")
-        }
+        self.init(kind: state == .verified ? .approved : .pending, text: state.displayName)
     }
 }
 
