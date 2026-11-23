@@ -25,7 +25,9 @@
   <PropertyGroup Condition="'$(GenerateAppxPackageOnBuild)' == 'true'">
     <AppxPackageDir>$(MSBuildProjectDirectory)\AppPackages\</AppxPackageDir>
     <AppxBundle>Never</AppxBundle>
-    <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == ''">false</AppxPackageSigningEnabled>
+    <!-- Signing is done afterwards with signtool (see scripts/Build-Msix.ps1). -->
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
     <GenerateTestArtifacts>false</GenerateTestArtifacts>
   </PropertyGroup>
 
