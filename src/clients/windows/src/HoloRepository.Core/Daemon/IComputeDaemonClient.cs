@@ -11,7 +11,22 @@ public enum ComputeBackend
     RtxSparkArm,
 }
 
-public sealed record BackendCapability(ComputeBackend Backend, bool Detected, bool Active, string Detail);
+public static class ComputeBackendExtensions
+{
+    public static string DisplayName(this ComputeBackend backend) => backend switch
+    {
+        ComputeBackend.Cpu => "CPU",
+        ComputeBackend.NvidiaCuda => "NVIDIA CUDA",
+        ComputeBackend.IntelArc => "Intel ARC (OpenVINO / oneAPI)",
+        ComputeBackend.RtxSparkArm => "RTX Spark (ARM64)",
+        _ => backend.ToString(),
+    };
+}
+
+public sealed record BackendCapability(ComputeBackend Backend, bool Detected, bool Active, string Detail)
+{
+    public string Name => Backend.DisplayName();
+}
 
 public sealed record DaemonStatus(
     string Mode,

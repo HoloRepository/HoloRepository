@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>HoloRepository.App</RootNamespace>
+    <AssemblyName>HoloRepository</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' And '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <DefaultLanguage>en-GB</DefaultLanguage>
+  </PropertyGroup>
+
+  <!-- Day-to-day builds run unpackaged (dotnet run / F5). Pass -p:GenerateAppxPackageOnBuild=true to produce the MSIX. -->
+  <PropertyGroup Condition="'$(GenerateAppxPackageOnBuild)' != 'true'">
+    <WindowsPackageType>None</WindowsPackageType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GenerateAppxPackageOnBuild)' == 'true'">
+    <AppxPackageDir>$(MSBuildProjectDirectory)\AppPackages\</AppxPackageDir>
+    <AppxBundle>Never</AppxBundle>
+    <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == ''">false</AppxPackageSigningEnabled>
+    <GenerateTestArtifacts>false</GenerateTestArtifacts>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\*.png" />
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HoloRepository.Core\HoloRepository.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)' != 'true' and '$(EnableMsixTooling)' == 'true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+</Project>

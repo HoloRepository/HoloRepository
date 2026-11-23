@@ -13,6 +13,9 @@ public sealed record StudyMetadata
     public DateTime? StudyDate { get; init; }
     public string Source { get; init; } = string.Empty;
     public bool IsSynthetic { get; init; }
+
+    /// <summary>Patient name with DICOM person-name separators replaced for display.</summary>
+    public string PatientDisplayName => PatientName.Replace('^', ' ').Trim();
 }
 
 /// <summary>A volume together with its metadata.</summary>
