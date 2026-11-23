@@ -1,0 +1,30 @@
+# Build output
+bin/
+obj/
+AppPackages/
+BundleArtifacts/
+publish/
+artifacts/
+
+# IDE / tooling
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.rsuser
+*.DotSettings.user
+
+# Test & coverage output
+TestResults/
+coverage/
+*.coverage
+coverage.cobertura.xml
+
+# Signing material
+*.pfx
+*.snk
+
+# OS
+Thumbs.db
+.DS_Store
