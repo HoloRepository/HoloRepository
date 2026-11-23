@@ -55,7 +55,6 @@ public static class PhantomGenerator
         Parallel.For(0, depth, z =>
         {
             double zm = (z + 0.5) * spacing.Z;
-            bool ribLevel = (zm % 26) < 9 && zm > pd * 0.15;
             bool discLevel = (zm % 30) < 5;
 
             for (int y = 0; y < height; y++)
@@ -72,8 +71,12 @@ public static class PhantomGenerator
                     {
                         value = body > 0.82 ? Fat : SoftTissue;
 
-                        // Ribs: a broken elliptical shell just inside the fat layer.
-                        if (ribLevel && body > 0.66 && body < 0.76 && ym > ph * 0.2)
+                        // Ribs: an elliptical shell just inside the fat layer, sloping down towards the front
+                        // and stopping short of the sternum (costal cartilage gap).
+                        double ribZ = zm + 0.35 * (ym - cy);
+                        bool ribLevel = (ribZ % 26 + 26) % 26 < 8 && zm > pd * 0.12 && zm < pd * 0.88;
+                        bool nearSternum = Math.Abs(xm - cx) < pw * 0.1 && ym < cy;
+                        if (ribLevel && !nearSternum && body > 0.66 && body < 0.76)
                             value = Cortical;
 
                         // Sternum.

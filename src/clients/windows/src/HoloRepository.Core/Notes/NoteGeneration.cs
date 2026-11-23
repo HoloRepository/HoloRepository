@@ -91,7 +91,7 @@ public sealed class TemplateNoteGenerator : INoteGenerator
         var study = request.Study;
         string header = study is null
             ? "Study: not specified"
-            : $"Patient: {study.PatientName} ({study.PatientId}) · {study.Modality} · {study.StudyDescription}" +
+            : $"Patient: {study.PatientDisplayName} ({study.PatientId}) · {study.Modality} · {study.StudyDescription}" +
               (study.StudyDate is DateTime d ? $" · {d:dd MMM yyyy}" : string.Empty);
 
         var mdt = new MdtNote(header, request.Transcript.Speakers, discussion, findings, history, measurements, plan);

@@ -15,6 +15,8 @@ public class HardwareProbeTests
         var caps = probe.Probe(ComputeBackend.Cpu);
 
         Assert.True(caps.Single(c => c.Backend == ComputeBackend.Cpu).Active);
+        Assert.Equal("NVIDIA CUDA", caps.Single(c => c.Backend == ComputeBackend.NvidiaCuda).Name);
+        Assert.All(Enum.GetValues<ComputeBackend>(), b => Assert.False(string.IsNullOrEmpty(b.DisplayName())));
         Assert.True(caps.Single(c => c.Backend == ComputeBackend.NvidiaCuda).Detected);
         Assert.False(caps.Single(c => c.Backend == ComputeBackend.IntelArc).Detected);
         Assert.False(caps.Single(c => c.Backend == ComputeBackend.RtxSparkArm).Detected);
