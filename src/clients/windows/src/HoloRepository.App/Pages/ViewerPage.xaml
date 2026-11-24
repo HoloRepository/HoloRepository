@@ -70,6 +70,7 @@
                         <x:String>3D · tissue and bone</x:String>
                         <x:String>3D · bone</x:String>
                         <x:String>3D · brightest (MIP)</x:String>
+                        <x:String>3D · detailed (NiiVue)</x:String>
                     </ComboBox>
                 </AppBarElementContainer>
                 <AppBarButton Label="Reset" Click="Reset_Click">

@@ -12,7 +12,7 @@ Prototype of the **HoloRepository 2027** Windows client: a native WinUI 3 applic
 |---|---|---|
 | Native Windows client | WinUI 3 (Windows App SDK 1.7), Mica, dark "reading room" and light themes, pop-out viewer windows, full-screen viewports, MSIX packaging | FR-01 |
 | Study ingestion | Opens DICOM from folders (including DICOMDIR layouts), individual files, `.zip` archives, drag and drop, or the command line. See [DICOM support](#dicom-support). Also includes a synthetic chest CT, and NIfTI images can be read and re-oriented | FR-03 |
-| Viewing | Axial / coronal / sagittal MPR with tissue presets, crosshair sync and a 3D view (volume compositing or MIP). Any of the four views can be made full screen | FR-02, FR-04 |
+| Viewing | Axial / coronal / sagittal MPR with tissue presets, crosshair sync and a 3D view: CPU volume compositing or MIP, or GPU volume rendering with organ surfaces via the bundled [NiiVue](https://github.com/niivue/niivue) viewer. Any of the four views can be made full screen | FR-02, FR-04 |
 | Finding organs | *Find organs* sends the scan to the HoloRepository server with the chosen model (`nv-segment-ct`, kidney, liver, head and neck), then shows the returned segmentation as colour on every slice and as 3D surfaces, with per-structure volumes and show/hide. An offline demo is used when not signed in | FR-10 |
 | Spatial markup | Pins, measurements (mm) and notes stored in patient coordinates, shown on every plane and in 3D | FR-06 |
 | Consultation | Webex integration point with simulated participants, viewport and markup sync, and consultation capture (ClinicAVT stand-in) | FR-05, FR-06 |
@@ -134,6 +134,12 @@ tests/HoloRepository.Core.Tests xUnit tests
 scripts/                        MSIX packaging and test certificate
 docs/                           Architecture notes and screenshots
 ```
+
+## NiiVue
+
+Choosing **3D · detailed (NiiVue)** in the Viewer's 3D style list shows the scan in [NiiVue](https://github.com/niivue/niivue) 0.69.0, which runs inside the app in WebView2 (WebGL 2). NiiVue is bundled in `src/HoloRepository.App/NiiVue/` (BSD-2-Clause, see `LICENSE-niivue.txt`), so it works offline and fetches nothing from the internet.
+
+The app writes the scan and its organ label map as NIfTI and the organ surfaces as `.mz3` (all in RAS millimetres, NiiVue's world space) to a scene folder under `%LOCALAPPDATA%\HoloRepository\niivue`. It serves them to NiiVue from that folder only, and deletes each scene as soon as a newer one replaces it.
 
 ## Privacy
 

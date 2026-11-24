@@ -240,7 +240,7 @@ public sealed partial class ViewerPage : Page
         _defaultWindow = metadata.DefaultWindow;
         _isCt = metadata.Modality == "CT";
         // HU-based 3D styles only make sense for CT; other modalities start in MIP with their own window.
-        RenderBox.SelectedIndex = _isCt ? Math.Min(_renderMode, 1) : 2;
+        RenderBox.SelectedIndex = _renderMode == NiiVueMode ? NiiVueMode : _isCt ? Math.Min(_renderMode, 1) : 2;
         UpdateSubtitle();
         ResetView();
         RefreshMarkup();
@@ -473,9 +473,77 @@ public sealed partial class ViewerPage : Page
 
     // ---- 3D ----------------------------------------------------------------------------------
 
+    /// <summary>Index of the NiiVue (GPU) entry in the 3D style list.</summary>
+    private const int NiiVueMode = 3;
+
+    private bool _niivueBusy, _niivueAgain;
+    private string? _niivueKey;
+
+    /// <summary>
+    /// Shows the series, its organ overlay and surfaces in NiiVue. The scene is only re-exported when the
+    /// series, segmentation or visible structures change; camera changes are handled by NiiVue itself.
+    /// </summary>
+    private async Task UpdateNiiVueAsync()
+    {
+        if (_seriesId is null || _geometry is null) return;
+        if (_niivueBusy)
+        {
+            _niivueAgain = true;
+            return;
+        }
+
+        _niivueBusy = true;
+        try
+        {
+            do
+            {
+                _niivueAgain = false;
+                var segmentation = OrgansVisible ? _services.SegmentationFor(_seriesId) : null;
+                string key = $"{_seriesId}|{segmentation?.CompletedAt.UtcTicks}|{string.Join(',', _hiddenStructures.Order())}";
+                if (key == _niivueKey && VolumeView.IsNiiVueShown) continue;
+
+                var window = _isCt ? RenderModes[0].Window : _defaultWindow ?? _window;
+                var (folder, prefix) = NiiVueHost.NewScene();
+                var geometry = _geometry;
+                var hidden = _hiddenStructures.ToHashSet();
+                var scene = await Task.Run(() => NiiVueSceneWriter.Write(folder, geometry, window, segmentation, hidden));
+                string? error = await VolumeView.ShowNiiVueAsync(scene, prefix, Technical);
+                if (error is null)
+                {
+                    _niivueKey = key;
+                    NiiVueHost.DeleteScenes(keep: folder);
+                }
+                else
+                {
+                    _niivueKey = null;
+                    SyncText.Text = Technical ? $"NiiVue could not show the scan: {error}" : "The detailed 3D view could not be shown on this computer.";
+                }
+            }
+            while (_niivueAgain);
+        }
+        catch (Exception ex)
+        {
+            SyncText.Text = Technical ? $"NiiVue could not show the scan: {ex.Message}" : "The detailed 3D view could not be shown on this computer.";
+        }
+        finally
+        {
+            _niivueBusy = false;
+        }
+    }
+
     private async void Request3D()
     {
         if (_seriesId is null || _geometry is null) return;
+        if (_renderMode == NiiVueMode)
+        {
+            await UpdateNiiVueAsync();
+            return;
+        }
+        if (VolumeView.IsNiiVueShown)
+        {
+            VolumeView.HideNiiVue();
+            _niivueKey = null;
+        }
         if (_rendering)
         {
             _renderAgain = true;
