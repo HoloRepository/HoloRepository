@@ -37,6 +37,40 @@ public static class VolumeRenderer
 
     private readonly record struct Camera(Vec Right, Vec Up, Vec Forward, Vec Centre, double HalfExtent, double HalfDepth);
 
+    /// <summary>The camera of a render request, for projecting meshes and markers into the rendered image.</summary>
+    public readonly struct ViewTransform
+    {
+        private readonly double _rx, _ry, _rz, _ux, _uy, _uz, _fx, _fy, _fz, _cx, _cy, _cz, _half;
+        private readonly int _size;
+
+        internal ViewTransform(Volume volume, VolumeRenderRequest request)
+        {
+            var cam = BuildCamera(volume, request);
+            (_rx, _ry, _rz) = (cam.Right.X, cam.Right.Y, cam.Right.Z);
+            (_ux, _uy, _uz) = (cam.Up.X, cam.Up.Y, cam.Up.Z);
+            (_fx, _fy, _fz) = (cam.Forward.X, cam.Forward.Y, cam.Forward.Z);
+            (_cx, _cy, _cz) = (cam.Centre.X, cam.Centre.Y, cam.Centre.Z);
+            _half = cam.HalfExtent;
+            _size = request.Size;
+        }
+
+        public int Size => _size;
+
+        /// <summary>View direction in volume space (for lighting).</summary>
+        public (double X, double Y, double Z) Forward => (_fx, _fy, _fz);
+
+        /// <summary>Pixel position and depth (larger = further from the viewer) of a volume-space point.</summary>
+        public (double X, double Y, double Depth) Project(double x, double y, double z)
+        {
+            double dx = x - _cx, dy = y - _cy, dz = z - _cz;
+            double u = (dx * _rx + dy * _ry + dz * _rz) / _half;
+            double v = (dx * _ux + dy * _uy + dz * _uz) / _half;
+            return ((u + 1) / 2 * _size, (1 - v) / 2 * _size, dx * _fx + dy * _fy + dz * _fz);
+        }
+    }
+
+    public static ViewTransform GetView(Volume volume, VolumeRenderRequest request) => new(volume, request);
+
     public static RenderedImage Render(Volume volume, VolumeRenderRequest request, CancellationToken cancellationToken = default)
     {
         if (request.Size <= 0) throw new ArgumentOutOfRangeException(nameof(request), "Size must be positive.");

@@ -12,6 +12,9 @@ public sealed record StudyMetadata
     public string SeriesInstanceUid { get; init; } = string.Empty;
     public DateTime? StudyDate { get; init; }
     public string Source { get; init; } = string.Empty;
+
+    /// <summary>Folder or file the series was read from, when it came from disk.</summary>
+    public string? SourcePath { get; init; }
     public bool IsSynthetic { get; init; }
 
     /// <summary>Patient name with DICOM person-name separators replaced for display.</summary>
