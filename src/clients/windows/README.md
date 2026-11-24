@@ -10,7 +10,7 @@ Prototype of the **HoloRepository 2027** Windows client: a native WinUI 3 applic
 
 | Area | In the app | Brief |
 |---|---|---|
-| Native Windows client | WinUI 3 (Windows App SDK 1.6), Mica, dark "reading room" and light themes, pop-out viewer windows, MSIX packaging | FR-01 |
+| Native Windows client | WinUI 3 (Windows App SDK 1.7), Mica, dark "reading room" and light themes, pop-out viewer windows, MSIX packaging | FR-01 |
 | Study ingestion | Opens a folder of DICOM files (grouped by series, sorted along the slice normal, rescale applied) or generates a synthetic chest CT. Can export a series back to DICOM | FR-03 |
 | Viewing | Axial / coronal / sagittal MPR with window/level presets, crosshair sync, HU readout, and a 3D view (volume compositing or MIP) | FR-02, FR-04 |
 | Spatial markup | Pins, calipers (mm) and callouts stored in patient coordinates, shown on every plane and in 3D | FR-06 |
