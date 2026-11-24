@@ -1,385 +1,277 @@
 //
 //  DoctorHomeView.swift
-//  
+//
 //
 //  Created by Ng Xin Ning on 18/11/2026.
 //
 
 import SwiftUI
 
-/// Doctor Home: greeting, active MDT session and summary cards (count + up to 3 items each).
+/// Doctor Home, top to bottom: greeting and date with bell and avatar, the active MDT session,
+/// pending tasks with four filters, and upcoming meetings.
 struct DoctorHomeView: View {
+    let model: DoctorHomeModel
+    /// Authorised clinical records (viewer, reports, MDT cases).
+    let records: PatientsModel
+    /// Switches the doctor tab bar ("See more" → Video Meeting).
+    var onSelectTab: (DoctorTab) -> Void = { _ in }
+
     @Environment(AppState.self) private var appState
-    @State private var model: DoctorHomeModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var path: [DoctorRoute] = []
+    @State private var taskFilter: TaskFilter = .notStarted
     @State private var isShowingProfile = false
-    @State private var isShowingJoinAlert = false
 
-    /// Called with a patient id when a patient name is tapped (switches to the Patients tab).
-    /// When nil, tapping a patient name pushes a placeholder instead.
-    private let onOpenPatient: ((String) -> Void)?
-
-    /// Items shown per summary card before "See all".
+    /// Tasks and meetings shown on Home before "See all".
     private let previewLimit = 3
 
-    init(model: DoctorHomeModel = DoctorHomeModel(), onOpenPatient: ((String) -> Void)? = nil) {
-        _model = State(initialValue: model)
-        self.onOpenPatient = onOpenPatient
-    }
+    private var isLargeText: Bool { dynamicTypeSize.isAccessibilitySize }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-                    header
-
-                    if let session = model.activeSession {
-                        activeSessionCard(session)
+        NavigationStack(path: $path) {
+            // Re-render every minute so the greeting, date and session status follow the clock.
+            TimelineView(.everyMinute) { context in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+                        header(now: context.date)
+                        activeSession(now: context.date)
+                        pendingTasks
+                        upcomingMeetings(now: context.date)
                     }
-
-                    tasksCard
-                    upcomingSessionsCard
-                    activityCard
-                    notificationsCard
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.bottom, Theme.Spacing.l)
                 }
-                .padding(Theme.Spacing.m)
             }
             .background(Theme.background)
-            .navigationTitle("Home")
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: HomeDestination.self) { destination in
-                HomePlaceholderView(title: destination.title(patientName: model.patientName(for:)))
-            }
+            .doctorDestinations(home: model, records: records) { path.append($0) }
             .sheet(isPresented: $isShowingProfile) {
                 DoctorProfileView()
-            }
-            .alert("Coming in March", isPresented: $isShowingJoinAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Joining live MDT sessions will be available in a later release.")
-            }
-            .task {
-                if !model.hasLoaded {
-                    model.load(from: appState.dataService)
-                }
             }
         }
     }
 
-    // MARK: Header
+    // MARK: 1. Header
 
-    private var header: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.s) {
-            // Re-render every minute so the greeting follows the time of day.
-            TimelineView(.everyMinute) { context in
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(DoctorHomeModel.greeting(for: appState.currentUser?.name, at: context.date))
-                        .font(.largeTitle.weight(.semibold))
-                        .accessibilityAddTraits(.isHeader)
-                    Text(context.date, format: .dateTime.weekday(.wide).day().month(.wide).year())
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+    private func header(now: Date) -> some View {
+        let greeting = DoctorHomeModel.greeting(for: appState.currentUser?.name, at: now)
+        let text = VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text("\(greeting) 👋")
+                .font(.title2.weight(.semibold))
+                .accessibilityLabel(greeting)
+                .accessibilityAddTraits(.isHeader)
+            Text(now, format: .dateTime.weekday(.wide).day().month(.wide).year())
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        return Group {
+            if isLargeText {
+                // Icons above the greeting so the text gets the full width.
+                VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                    HStack { Spacer(); headerIcons }
+                    text
+                }
+            } else {
+                HStack(alignment: .top, spacing: Theme.Spacing.s) {
+                    text
+                    headerIcons
                 }
             }
+        }
+        .padding(.top, Theme.Spacing.s)
+    }
 
-            Spacer(minLength: Theme.Spacing.s)
+    private var headerIcons: some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            Button {
+                path.append(.notifications)
+            } label: {
+                Image(systemName: "bell")
+                    .font(.title3)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .overlay(alignment: .topTrailing) {
+                        if model.unreadNotificationCount > 0 {
+                            Circle()
+                                .fill(Theme.doctorAccent)
+                                .frame(width: Theme.Spacing.s + 2, height: Theme.Spacing.s + 2)
+                                .overlay(Circle().stroke(Theme.background, lineWidth: 2))
+                                .offset(x: -Theme.Spacing.s, y: Theme.Spacing.s)
+                        }
+                    }
+            }
+            .accessibilityLabel(model.unreadNotificationCount > 0
+                                ? "Notifications, \(model.unreadNotificationCount) unread"
+                                : "Notifications")
 
             Button {
                 isShowingProfile = true
             } label: {
-                Image(systemName: "person.circle")
-                    .font(.title2)
-                    .frame(minWidth: 44, minHeight: 44)
+                InitialsAvatar(initials)
             }
             .accessibilityLabel("Profile")
         }
     }
 
-    // MARK: Active MDT session
+    private var initials: String {
+        // "Dr Sarah Smith" → "SS".
+        let words = (appState.currentUser?.name ?? "").split(separator: " ").filter { $0 != "Dr" }
+        return words.prefix(2).compactMap(\.first).map(String.init).joined()
+    }
 
-    private func activeSessionCard(_ session: MDTSession) -> some View {
+    // MARK: 2. Active MDT session
+
+    private func activeSession(now: Date) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            Label("Active MDT session", systemImage: "person.3")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            sectionHeading("Active MDT session")
+            if let session = model.activeSession(at: now) {
+                activeSessionCard(session, now: now)
+            } else {
+                Label("No MDT session running or starting soon.", systemImage: "video.slash")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(minHeight: 44)
+                    .cardStyle()
+            }
+        }
+    }
 
-            Text(session.caseName)
-                .font(.headline)
-
-            Text("Started \(session.startTime, format: .dateTime.hour().minute()) · \(session.participantCount) participants")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
+    private func activeSessionCard(_ session: MDTSession, now: Date) -> some View {
+        let status = session.liveStatus(at: now)
+        let caseCount = model.cases(for: session).count
+        return VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                HStack(alignment: .firstTextBaseline) {
+                    if let specialty = session.specialty {
+                        Text(specialty.uppercased())
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.doctorAccent)
+                    }
+                    Spacer(minLength: Theme.Spacing.s)
+                    MDTStatusLabel(status: status)
+                }
+                Text(session.caseName)
+                    .font(.title3.weight(.semibold))
+                Text(session.startTime, format: .dateTime.weekday(.wide).day().month(.wide))
+                    .font(.subheadline)
+                Text(session.timeRangeText)
+                    .font(.subheadline)
+                    .monospacedDigit()
+                Label("\(session.participantCount) participants · \(caseCount == 1 ? "1 case" : "\(caseCount) cases")",
+                      systemImage: "person.3")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(session.accessibilityText(at: now)), \(session.participantCount) participants, \(caseCount) \(caseCount == 1 ? "case" : "cases")")
 
             Button {
-                isShowingJoinAlert = true
+                path.append(.session(sessionId: session.id))
             } label: {
-                Text("Join session")
+                Text(status == .live ? "Join session" : "View session")
+                    .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.roundedRectangle(radius: Theme.Radius.button))
             .tint(Theme.doctorAccent)
-            .accessibilityLabel("Join session, \(session.caseName)")
+            .accessibilityLabel("\(status == .live ? "Join" : "View") session, \(session.caseName)")
         }
         .cardStyle()
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Active MDT session, \(session.caseName)")
+        // The most prominent card on Home: an accent outline on top of the usual card border.
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).stroke(Theme.doctorAccent, lineWidth: 1.5))
     }
 
-    // MARK: Summary cards
+    // MARK: 3. Pending tasks
 
-    private var tasksCard: some View {
-        SummaryCard(title: "Pending tasks", systemImage: "checklist", count: model.tasks.count,
-                    emptyMessage: "No pending tasks. You're all caught up.", seeAll: .allTasks) {
-            ForEach(model.tasks.prefix(previewLimit)) { task in
-                HomeItemRow(destination: .task(task), title: task.title,
-                            patientId: task.patientId, patientName: model.patientName(for: task.patientId),
-                            onOpenPatient: onOpenPatient) {
-                    Text(task.kind.label)
-                } accessory: {
-                    if let state = task.verificationState {
-                        StatusBadge(state: state)
-                    }
-                }
+    private var pendingTasks: some View {
+        let tasks = model.tasks(for: taskFilter)
+        return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            sectionHeading("Pending tasks", link: "See all", linkLabel: "See all tasks") {
+                path.append(.tasks(taskFilter))
             }
-        }
-    }
+            TaskFilterBar(selection: $taskFilter) { model.tasks(for: $0).count }
 
-    private var upcomingSessionsCard: some View {
-        SummaryCard(title: "Upcoming MDT consultations", systemImage: "calendar",
-                    count: model.upcomingSessions.count,
-                    emptyMessage: "No upcoming MDT consultations.", seeAll: .allSessions) {
-            ForEach(model.upcomingSessions.prefix(previewLimit)) { session in
-                HomeItemRow(destination: .session(session), title: session.caseName,
-                            patientId: session.patientId, patientName: model.patientName(for: session.patientId),
-                            onOpenPatient: onOpenPatient) {
-                    Text(session.startTime,
-                         format: .dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute())
-                        .monospacedDigit()
-                }
-            }
-        }
-    }
-
-    private var activityCard: some View {
-        SummaryCard(title: "Recent activity", systemImage: "clock.arrow.circlepath",
-                    count: model.activity.count,
-                    emptyMessage: "No recent activity.", seeAll: .allActivity) {
-            ForEach(model.activity.prefix(previewLimit)) { item in
-                HomeItemRow(destination: .activity(item), title: item.title, systemImage: item.kind.systemImage,
-                            patientId: item.patientId, patientName: model.patientName(for: item.patientId),
-                            onOpenPatient: onOpenPatient) {
-                    Text(item.timestamp, format: .relative(presentation: .numeric, unitsStyle: .abbreviated))
-                        .monospacedDigit()
-                }
-            }
-        }
-    }
-
-    private var notificationsCard: some View {
-        SummaryCard(title: "Notifications", systemImage: "bell", count: model.notifications.count,
-                    emptyMessage: "No new notifications.", seeAll: .allNotifications) {
-            ForEach(model.notifications.prefix(previewLimit)) { notification in
-                HomeItemRow(destination: .notification(notification), title: notification.title,
-                            systemImage: notification.kind.systemImage,
-                            patientId: notification.patientId,
-                            patientName: model.patientName(for: notification.patientId),
-                            onOpenPatient: onOpenPatient) {
-                    Text(notification.timestamp, format: .relative(presentation: .numeric, unitsStyle: .abbreviated))
-                        .monospacedDigit()
-                } accessory: {
-                    if !notification.isRead {
-                        Circle()
-                            .fill(Theme.doctorAccent)
-                            .frame(width: Theme.Spacing.s, height: Theme.Spacing.s)
-                            .accessibilityLabel("Unread")
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Navigation
-
-/// Screens pushed from Home. All are placeholders for now.
-enum HomeDestination: Hashable {
-    case allTasks, allSessions, allActivity, allNotifications
-    case task(DoctorTask)
-    case session(MDTSession)
-    case activity(ActivityItem)
-    case notification(AppNotification)
-    case patient(String)
-
-    func title(patientName: (String?) -> String?) -> String {
-        switch self {
-        case .allTasks: "Pending tasks"
-        case .allSessions: "MDT consultations"
-        case .allActivity: "Recent activity"
-        case .allNotifications: "Notifications"
-        case .task(let task): task.title
-        case .session(let session): session.caseName
-        case .activity(let item): item.title
-        case .notification(let notification): notification.title
-        case .patient(let id): patientName(id) ?? "Patient"
-        }
-    }
-}
-
-// MARK: - Summary card
-
-/// A Home summary card: title with icon and count, up to 3 items, then "See all".
-private struct SummaryCard<Content: View>: View {
-    let title: String
-    let systemImage: String
-    let count: Int
-    let emptyMessage: String
-    let seeAll: HomeDestination
-    @ViewBuilder let content: Content
-
-    private var countDescription: String {
-        "\(title), \(count) \(count == 1 ? "item" : "items")"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            HStack(spacing: Theme.Spacing.s) {
-                Label(title, systemImage: systemImage)
-                    .font(.headline)
-                Spacer(minLength: Theme.Spacing.s)
-                Text(count, format: .number)
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, Theme.Spacing.s)
-                    .padding(.vertical, Theme.Spacing.xs)
-                    .background(Theme.cardBorder, in: Capsule())
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(countDescription)
-            .accessibilityAddTraits(.isHeader)
-
-            if count == 0 {
-                // Empty is a normal state, not an error.
-                Label(emptyMessage, systemImage: "tray")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            } else {
-                content
-
-                NavigationLink(value: seeAll) {
-                    Text("See all")
-                        .font(.subheadline.weight(.semibold))
+            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                if tasks.isEmpty {
+                    Label(taskFilter.emptyMessage, systemImage: "tray")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                         .frame(minHeight: 44)
                 }
-                .accessibilityLabel("See all \(title.lowercased())")
-            }
-        }
-        .cardStyle()
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(countDescription)
-    }
-}
-
-// MARK: - Item row
-
-/// One item in a summary card. The main part pushes a detail screen; the patient name is its own button.
-private struct HomeItemRow<Detail: View, Accessory: View>: View {
-    let destination: HomeDestination
-    let title: String
-    var systemImage: String? = nil
-    let patientId: String?
-    let patientName: String?
-    let onOpenPatient: ((String) -> Void)?
-    @ViewBuilder let detail: Detail
-    @ViewBuilder let accessory: Accessory
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            NavigationLink(value: destination) {
-                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.s) {
-                    if let systemImage {
-                        Image(systemName: systemImage)
-                            .foregroundStyle(.secondary)
-                            .accessibilityHidden(true)
+                ForEach(Array(tasks.prefix(previewLimit).enumerated()), id: \.element.id) { index, task in
+                    if index > 0 { Divider() }
+                    Button {
+                        if let route = task.route { path.append(route) }
+                    } label: {
+                        TaskRow(task: task, patientName: model.patientName(for: task.patientId),
+                                studyName: model.studyName(for: task.studyId))
                     }
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        Text(title)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                        detail
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: Theme.Spacing.s)
-                    accessory
+                    .buttonStyle(.plain)
                 }
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .cardStyle()
+        }
+    }
 
-            if let patientId, let patientName {
-                patientLink(id: patientId, name: patientName)
-                    .padding(.leading, systemImage == nil ? 0 : Theme.Spacing.l)
+    // MARK: 4. Upcoming meetings
+
+    private func upcomingMeetings(now: Date) -> some View {
+        let sessions = model.upcomingSessions(at: now)
+        return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            sectionHeading("Upcoming meetings", link: "See more", linkLabel: "See more meetings") {
+                onSelectTab(.meetings)
             }
-        }
-        .padding(.vertical, Theme.Spacing.xs)
-    }
-
-    @ViewBuilder
-    private func patientLink(id: String, name: String) -> some View {
-        let label = Label(name, systemImage: "person")
-            .font(.subheadline)
-            .frame(minHeight: 44)
-
-        if let onOpenPatient {
-            Button { onOpenPatient(id) } label: { label }
-                .accessibilityLabel("\(name), open in Patients")
-        } else {
-            NavigationLink(value: HomeDestination.patient(id)) { label }
-                .accessibilityLabel("\(name), open patient")
-        }
-    }
-}
-
-extension HomeItemRow where Accessory == EmptyView {
-    init(destination: HomeDestination, title: String, systemImage: String? = nil,
-         patientId: String?, patientName: String?, onOpenPatient: ((String) -> Void)?,
-         @ViewBuilder detail: () -> Detail) {
-        self.init(destination: destination, title: title, systemImage: systemImage,
-                  patientId: patientId, patientName: patientName, onOpenPatient: onOpenPatient,
-                  detail: detail, accessory: { EmptyView() })
-    }
-}
-
-// MARK: - Display helpers
-
-private extension DoctorTaskKind {
-    var label: String {
-        switch self {
-        case .reviewReport: "Report review"
-        case .checkMarkers: "Marker check"
+            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                if sessions.isEmpty {
+                    Text("No upcoming MDT sessions.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(minHeight: 44)
+                }
+                ForEach(Array(sessions.prefix(previewLimit).enumerated()), id: \.element.id) { index, session in
+                    if index > 0 { Divider() }
+                    Button {
+                        path.append(.session(sessionId: session.id))
+                    } label: {
+                        MeetingRow(session: session, now: now)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .cardStyle()
         }
     }
-}
 
-private extension ActivityKind {
-    var systemImage: String {
-        switch self {
-        case .scanUploaded: "square.and.arrow.up"
-        case .commentAdded: "text.bubble"
-        case .reportApproved: "checkmark.seal"
-        }
+    // MARK: Helpers
+
+    private func sectionHeading(_ title: String) -> some View {
+        Text(title)
+            .font(.headline)
+            .accessibilityAddTraits(.isHeader)
     }
-}
 
-private extension AppNotificationKind {
-    var systemImage: String {
-        switch self {
-        case .newScan: "cube"
-        case .comment: "text.bubble"
-        case .meetingInvitation: "person.3"
+    /// Heading with a "See all →" style link on the right (below it at accessibility sizes).
+    private func sectionHeading(_ title: String, link: String, linkLabel: String,
+                                action: @escaping () -> Void) -> some View {
+        let layout = isLargeText
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        return layout {
+            sectionHeading(title)
+            if !isLargeText { Spacer() }
+            Button(action: action) {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Text(link)
+                    Image(systemName: "arrow.right")
+                }
+                .font(.subheadline.weight(.semibold))
+                .frame(minHeight: 44)
+            }
+            .accessibilityLabel(linkLabel)
         }
     }
 }
@@ -387,20 +279,33 @@ private extension AppNotificationKind {
 // MARK: - Previews
 
 #Preview("Doctor Home") {
-    DoctorHomeView(onOpenPatient: { _ in })
+    DoctorHomeView(model: .demo(), records: .demo())
+        .environment(AppState(currentUser: MockDataService().doctorUser))
+        .tint(Theme.doctorAccent)
+}
+
+#Preview("Doctor Home, dark") {
+    DoctorHomeView(model: .demo(), records: .demo())
+        .environment(AppState(currentUser: MockDataService().doctorUser))
+        .tint(Theme.doctorAccent)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("No active session") {
+    DoctorHomeView(model: .noActiveSession(), records: .demo())
         .environment(AppState(currentUser: MockDataService().doctorUser))
         .tint(Theme.doctorAccent)
 }
 
 #Preview("Empty") {
-    DoctorHomeView(model: .empty())
+    DoctorHomeView(model: .empty(), records: .demo())
         .environment(AppState(currentUser: MockDataService().doctorUser))
         .tint(Theme.doctorAccent)
 }
 
-#Preview("Dark mode") {
-    DoctorHomeView(onOpenPatient: { _ in })
+#Preview("Largest text") {
+    DoctorHomeView(model: .demo(), records: .demo())
         .environment(AppState(currentUser: MockDataService().doctorUser))
         .tint(Theme.doctorAccent)
-        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.accessibility5)
 }

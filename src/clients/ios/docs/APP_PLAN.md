@@ -89,19 +89,20 @@
 
 ## 2. Doctor / clinician app
 
-**Bottom navigation:** Home · Patients · Imaging · Reports
+**Bottom navigation:** Home · Patients · Scans · Video Meeting · Reports
 
-Meetings don't get their own tab. They appear in:
-- Home → Upcoming consultations
-- Home → Active MDT sessions
-- Patients → Patient-specific consultation history
+- **Scans** is the Imaging feature (section 2.3), renamed in the tab bar and title.
+- **Video Meeting** lists the active and upcoming MDT sessions. Each opens the MDT session detail: name, time, status, place, participants and cases (each case opens the 3D viewer). "Join video call" says video joining arrives in March (Webex).
+- Meetings also appear on Home and in a patient's consultation history (Patients).
 
 ### 2.1 Home
-- Welcome greeting
-- Recent activity
-- Pending tasks
-- Notifications
-- Upcoming MDT consultations and active MDT sessions
+In this order, in one scrolling page:
+1. Header: "Good morning, Dr Sarah" (by time of day) and today's date; notification bell with unread dot (opens the notifications list) and initials avatar (opens Profile)
+2. Active MDT session: the live or starting-soon session, with status (Live / Starting soon / Scheduled, from the times), participants and number of cases; "Join session" when live, otherwise "View session"
+3. Pending tasks: four filter chips (Not started · In progress · Urgent · Completed), up to 3 tasks, "See all" opens the full task list
+4. Upcoming meetings: up to 3 sessions with date blocks, "See more" opens Video Meeting
+
+**Tasks** have a status (not started, in progress, completed) and a separate priority (normal, urgent). "Urgent" shows urgent tasks of any status except completed. Kinds: review scan, review annotations, approve clinical report, accept MDT invitation, prepare MDT case. Each opens an existing screen (3D viewer, report detail or MDT session detail). Notifications stay separate from tasks.
 
 ### 2.2 Patients
 - Search patients

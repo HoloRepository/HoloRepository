@@ -46,7 +46,7 @@ struct StudyListView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationTitle("Imaging")
+            .navigationTitle("Scans")
             .navigationBarTitleDisplayMode(.large)
             .searchable(text: $searchText,
                         placement: .navigationBarDrawer(displayMode: .always),

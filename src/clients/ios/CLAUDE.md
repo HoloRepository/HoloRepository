@@ -30,7 +30,7 @@ HoloRepository/
 │   └── Viewer/     ViewerBridge, ModelWebView
 ├── Features/
 │   ├── Auth/       role choice, sign-in, invitation, activation
-│   ├── Doctor/     DoctorTabView + Home/, Patients/, Imaging/, Reports/, Profile/
+│   ├── Doctor/     DoctorTabView + Home/, Patients/, Imaging/ ("Scans" tab), Meetings/, Reports/, Profile/
 │   └── Patient/    PatientTabView + Home/, MyScans/, MyReports/, Appointments/, Profile/, Search/, ComingSoon/
 ├── Components/     shared UI: Card, StatusBadge, PatientBanner, EmptyState
 └── Resources/      Assets.xcassets, MockData/ (JSON), Viewer/ (holo_viewer.html)
@@ -41,7 +41,10 @@ HoloRepository/
 
 ## Roles and navigation
 - Sign-in → role check → doctor or patient tabs (RootView decides).
-- **Doctor tabs:** Home · Patients · Imaging · Reports. Meetings live in Home (upcoming and active MDT sessions) and in a patient's consultation history, not in their own tab.
+- **Doctor tabs:** Home · Patients · Scans · Video Meeting · Reports. "Scans" is the Imaging feature (`Features/Doctor/Imaging/`). Video Meeting (`Features/Doctor/Meetings/`) lists the active and upcoming MDT sessions; each opens the MDT session detail (cases open the 3D viewer). Joining video is a "Video joining arrives in March" note until Webex is built.
+- Doctor Home order: greeting and date (bell → notifications list, avatar → profile), Active MDT session, Pending tasks (filters: Not started · In progress · Urgent · Completed), Upcoming meetings. No recent activity or notification cards on Home.
+- Tasks have a `status` (notStarted / inProgress / completed) and a separate `priority` (normal / urgent). The Urgent filter is priority across all statuses except completed. Tasks open existing screens: review scan / annotations → 3D viewer, approve report → report detail, MDT invitation / case preparation → MDT session detail. Notifications are not tasks.
+- MDT session status (Live / Starting soon / Scheduled) is worked out from the start and end times.
 - **Patient tabs:** Home · Reports · Scans · Messages · Profile. Appointments has no tab: it opens from Home (Quick access, the Upcoming appointment card) and from search.
 - Patient Home order: header (bell, avatar), greeting, search bar, Quick access (Reports, Scans, Appointments / Messages, Family Access, AI Assistant), Your latest results, Upcoming appointment.
 - Features not built yet (Messages, Family Access, AI Assistant, patient notifications) open the shared `ComingSoonView`.
@@ -70,7 +73,7 @@ The 3D model is the team's shared web viewer inside a `WKWebView`. Never rebuild
 - Follow the phone's light/dark setting.
 - Text: Dynamic Type text styles only (`.largeTitle`, `.headline`, `.body`, `.subheadline`, `.caption`), regular and semibold. Patient app uses `.fontDesign(.rounded)` at the phone's normal text size (no extra size boost). Numbers use `.monospacedDigit()`.
 - Components: `TabView` with icons and labels; `List(.insetGrouped)`; cards via `.cardStyle()`; one `.borderedProminent` button per screen; `.searchable`; `ContentUnavailableView` for empty states; SF Symbols for icons.
-- Doctor Home uses summary cards (count + 2–3 items each).
+- Doctor Home: the Active MDT session card is the most prominent element; Pending tasks shows up to 3 rows with "See all"; Upcoming meetings shows up to 3 compact rows with date blocks.
 - Spacing in steps of 8 (`Theme.Spacing`); radius 12 for buttons, 16 for cards; tap targets at least 44 pt.
 
 ## AI content labels
