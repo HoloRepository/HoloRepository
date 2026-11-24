@@ -39,6 +39,8 @@
   <ItemGroup>
     <Content Include="Assets\*.png" />
     <Content Include="Assets\AppIcon.ico" />
+    <!-- NiiVue 0.69.0 (BSD-2-Clause), bundled so the GPU 3D view works offline. -->
+    <Content Include="NiiVue\**" CopyToOutputDirectory="PreserveNewest" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
