@@ -31,6 +31,16 @@ public sealed partial class MainWindow : Window
         services.TechnicalDetailsChanged += (_, _) => DispatcherQueue.TryEnqueue(() => DaemonBadgePanel.Visibility = services.TechnicalVisibility);
 
         Navigate("studies");
+
+        // Paths given on the command line ("Open with", or a folder dropped on the app icon) are opened straight away.
+        var paths = Environment.GetCommandLineArgs().Skip(1).Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
+        if (paths.Count > 0)
+        {
+            RootGrid.Loaded += async (_, _) =>
+            {
+                if (ContentFrame.Content is StudiesPage studies) await studies.OpenFromCommandLineAsync(paths);
+            };
+        }
     }
 
     /// <summary>Selects a navigation item by tag (studies, viewer, consultation, notes, settings).</summary>

@@ -85,6 +85,8 @@ public sealed partial class ViewerPage : Page
     private DateTime _lastViewportPublish = DateTime.MinValue;
     private CancellationTokenSource? _segmentCts;
     private FrameworkElement? _fullScreenView;
+    private WindowLevel? _defaultWindow;
+    private bool _isCt = true;
 
     public ViewerPage()
     {
@@ -234,6 +236,11 @@ public sealed partial class ViewerPage : Page
         _seriesId = seriesId;
         _geometry = _services.Daemon.GetGeometry(seriesId!);
         _hiddenStructures.Clear();
+        var metadata = _services.Daemon.LoadedSeries.First(s => s.Id == seriesId).Metadata;
+        _defaultWindow = metadata.DefaultWindow;
+        _isCt = metadata.Modality == "CT";
+        // HU-based 3D styles only make sense for CT; other modalities start in MIP with their own window.
+        RenderBox.SelectedIndex = _isCt ? Math.Min(_renderMode, 1) : 2;
         UpdateSubtitle();
         ResetView();
         RefreshMarkup();
@@ -261,7 +268,7 @@ public sealed partial class ViewerPage : Page
         _yaw = 25;
         _pitch = 12;
         _zoom = 1.35;
-        SetWindow(WindowLevel.Lung, fromPreset: true);
+        SetWindow(_defaultWindow ?? WindowLevel.Lung, fromPreset: true);
     }
 
     private async Task RefreshAllAsync()
@@ -482,6 +489,7 @@ public sealed partial class ViewerPage : Page
             {
                 _renderAgain = false;
                 var (name, window, mode) = RenderModes[_renderMode];
+                if (!_isCt && _defaultWindow is WindowLevel own) window = own;
                 double scale = XamlRoot?.RasterizationScale ?? 1;
                 int max = _fullScreenView == VolumeView ? 720 : 480;
                 int size = VolumeView.IsDragging ? 180 : Math.Clamp((int)(VolumeView.DisplaySize * scale * 0.75), 200, max);

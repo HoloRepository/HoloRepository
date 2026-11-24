@@ -17,6 +17,9 @@ public sealed record StudyMetadata
     public string? SourcePath { get; init; }
     public bool IsSynthetic { get; init; }
 
+    /// <summary>Window to open the series with (from the DICOM header or the image statistics); null means use a CT preset.</summary>
+    public WindowLevel? DefaultWindow { get; init; }
+
     /// <summary>Patient name with DICOM person-name separators replaced for display.</summary>
     public string PatientDisplayName => PatientName.Replace('^', ' ').Trim();
 }
