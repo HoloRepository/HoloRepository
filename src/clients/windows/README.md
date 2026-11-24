@@ -34,6 +34,8 @@ Simulated or not yet implemented: GPU kernels (CUDA, OpenVINO/oneAPI), the Webex
 
 ### Build and run
 
+The Windows client lives in `src/clients/windows` of the HoloRepository repository; run these commands from that folder.
+
 ```powershell
 dotnet build HoloRepository.Windows.sln
 dotnet run --project src/HoloRepository.App -p:Platform=x64
@@ -67,7 +69,7 @@ Import-Certificate -FilePath artifacts/signing/HoloRepository-test.cer -CertStor
 Add-AppxPackage artifacts/msix/HoloRepository.App_0.1.0.0_x64.msix
 ```
 
-Every push and pull request runs the GitHub Actions workflow, which tests, enforces coverage and uploads a signed x64 MSIX together with its `.cer` as a build artifact.
+Pushes and pull requests that touch `src/clients/windows/` run the [Windows client workflow](../../../.github/workflows/windows-client.yml), which tests, enforces coverage and uploads a signed x64 MSIX together with its `.cer` as a build artifact.
 
 ## Trying it out
 

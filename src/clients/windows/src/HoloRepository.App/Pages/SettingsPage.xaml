@@ -45,7 +45,7 @@
                     <TextBlock x:Name="VersionText" />
                     <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="Investigational research prototype. Not a medical device and not for diagnostic use. All imaging and transcript processing runs on this machine." />
-                    <HyperlinkButton Content="github.com/HoloRepository/Windows" NavigateUri="https://github.com/HoloRepository/Windows" Padding="0" />
+                    <HyperlinkButton Content="github.com/HoloRepository/HoloRepository" NavigateUri="https://github.com/HoloRepository/HoloRepository/tree/main/src/clients/windows" Padding="0" />
                 </StackPanel>
             </Border>
         </StackPanel>
