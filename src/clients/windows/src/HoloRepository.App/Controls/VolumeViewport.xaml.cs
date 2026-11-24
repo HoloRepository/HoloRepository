@@ -45,6 +45,23 @@ public sealed partial class VolumeViewport : UserControl
     /// <summary>Edge length of the square drawing area, used to pick a render resolution.</summary>
     public double DisplaySize => Math.Max(1, Math.Min(Surface.ActualWidth, Surface.ActualHeight));
 
+    public event EventHandler? FullScreenRequested;
+
+    public bool IsFullScreen
+    {
+        get => FullScreenIcon.Glyph == "";
+        set
+        {
+            FullScreenIcon.Glyph = value ? "" : "";
+            ToolTipService.SetToolTip(FullScreenButton, value ? "Exit full screen (Esc)" : "Full screen");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(FullScreenButton, value ? "Exit full screen" : "Full screen");
+        }
+    }
+
+    private void FullScreen_Click(object sender, RoutedEventArgs e) => FullScreenRequested?.Invoke(this, EventArgs.Empty);
+
+    private void Surface_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) => FullScreenRequested?.Invoke(this, EventArgs.Empty);
+
     public void Show(RenderedImage image, string info, IReadOnlyList<VolumeMarker> markers)
     {
         _image = image;
@@ -52,6 +69,7 @@ public sealed partial class VolumeViewport : UserControl
         _bitmap = BitmapHelper.Write(image.Width, image.Height, image.Bgra, _bitmap);
         RenderImage.Source = _bitmap;
         InfoText.Text = info;
+        InfoBadge.Visibility = string.IsNullOrEmpty(info) ? Visibility.Collapsed : Visibility.Visible;
         EmptyText.Visibility = Visibility.Collapsed;
         Layout();
     }

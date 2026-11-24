@@ -68,18 +68,60 @@ public sealed partial class SliceViewport : UserControl
     /// <summary>Optional function that formats a value readout for a hovered pixel.</summary>
     public Func<double, double, string>? DescribePoint { get; set; }
 
-    public void Show(SliceImage slice, WindowLevel window, int sliceCount)
+    public event EventHandler? FullScreenRequested;
+
+    public bool IsFullScreen
+    {
+        get => FullScreenIcon.Glyph == "";
+        set
+        {
+            FullScreenIcon.Glyph = value ? "" : "";
+            ToolTipService.SetToolTip(FullScreenButton, value ? "Exit full screen (Esc)" : "Full screen");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(FullScreenButton, value ? "Exit full screen" : "Full screen");
+        }
+    }
+
+    /// <summary>
+    /// Shows a slice with the given window. When <paramref name="labels"/> is supplied, segmented structures are
+    /// tinted with their colours.
+    /// </summary>
+    public void Show(SliceImage slice, WindowLevel window, int sliceCount, bool technical,
+        byte[]? labels = null, Func<byte, Rgba?>? colourOf = null)
     {
         _slice = slice;
         int needed = slice.Width * slice.Height * 4;
         if (_buffer.Length != needed) _buffer = new byte[needed];
         window.ApplyToBgra(slice.Pixels, _buffer);
+        if (labels is not null && colourOf is not null && labels.Length == slice.Pixels.Length) Tint(labels, colourOf);
         _bitmap = BitmapHelper.Write(slice.Width, slice.Height, _buffer, _bitmap);
         SliceImage.Source = _bitmap;
         EmptyText.Visibility = Visibility.Collapsed;
-        InfoText.Text = $"{slice.Index + 1}/{sliceCount}  {window.Describe()}";
+        InfoText.Text = technical
+            ? $"{slice.Index + 1}/{sliceCount}  {window.Describe()}"
+            : $"Slice {slice.Index + 1} of {sliceCount}";
+        if (!technical) CursorBadge.Visibility = Visibility.Collapsed;
         Layout();
     }
+
+    private void Tint(byte[] labels, Func<byte, Rgba?> colourOf)
+    {
+        var cache = new Rgba?[256];
+        var known = new bool[256];
+        for (int i = 0; i < labels.Length; i++)
+        {
+            byte l = labels[i];
+            if (l == 0) continue;
+            if (!known[l]) { cache[l] = colourOf(l); known[l] = true; }
+            if (cache[l] is not Rgba c) continue;
+            const double a = 0.45;
+            int o = i * 4;
+            _buffer[o] = (byte)(_buffer[o] * (1 - a) + c.B * a);
+            _buffer[o + 1] = (byte)(_buffer[o + 1] * (1 - a) + c.G * a);
+            _buffer[o + 2] = (byte)(_buffer[o + 2] * (1 - a) + c.R * a);
+        }
+    }
+
+    private void FullScreen_Click(object sender, RoutedEventArgs e) => FullScreenRequested?.Invoke(this, EventArgs.Empty);
 
     public void Clear()
     {

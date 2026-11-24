@@ -3,8 +3,11 @@ using HoloRepository.App.Controls;
 using HoloRepository.App.Services;
 using HoloRepository.Core.Imaging;
 using HoloRepository.Core.Markup;
+using HoloRepository.Core.Segmentation;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.UI;
@@ -20,8 +23,25 @@ public sealed class AnnotationRow(Annotation annotation)
     public Annotation Annotation { get; } = annotation;
     public string Id => Annotation.Id.ToString();
     public string Title => Annotation.Summary;
-    public string Detail => $"{Annotation.Kind} · {Annotation.Author} · {Annotation.CreatedAt.ToLocalTime():HH:mm}";
+    public string Detail => $"{KindName(Annotation.Kind)} · {Annotation.Author} · {Annotation.CreatedAt.ToLocalTime():HH:mm}";
     public SolidColorBrush Brush => Annotation.IsRemote ? RemoteBrush : LocalBrush;
+
+    public static string KindName(AnnotationKind kind) => kind switch
+    {
+        AnnotationKind.Caliper => "Measurement",
+        AnnotationKind.Callout => "Note",
+        _ => "Pin",
+    };
+}
+
+/// <summary>Row shown in the organs list.</summary>
+public sealed class StructureRow(SegmentedStructure structure, bool visible)
+{
+    public byte Label => structure.Label;
+    public string Name => structure.Name;
+    public string VolumeText => structure.VoxelCount > 0 ? structure.VolumeText : string.Empty;
+    public bool IsVisible { get; } = visible;
+    public SolidColorBrush Brush { get; } = new(Color.FromArgb(255, structure.Colour.R, structure.Colour.G, structure.Colour.B));
 }
 
 /// <summary>
@@ -50,6 +70,8 @@ public sealed partial class ViewerPage : Page
     private readonly Dictionary<SlicePlane, int> _index = new();
     private readonly Dictionary<SlicePlane, int> _requestVersion = new();
     private readonly ObservableCollection<AnnotationRow> _rows = new();
+    private readonly HashSet<byte> _hiddenStructures = new();
+    private readonly Dictionary<FrameworkElement, (int Row, int Column)> _homeCells;
 
     private string? _seriesId;
     private Volume? _geometry;
@@ -61,6 +83,8 @@ public sealed partial class ViewerPage : Page
     private (SlicePlane Plane, Point3 Start, Point3 End)? _caliperDraft;
     private bool _rendering, _renderAgain, _subscribed, _suppressPresetEvent;
     private DateTime _lastViewportPublish = DateTime.MinValue;
+    private CancellationTokenSource? _segmentCts;
+    private FrameworkElement? _fullScreenView;
 
     public ViewerPage()
     {
@@ -71,6 +95,13 @@ public sealed partial class ViewerPage : Page
             [SlicePlane.Coronal] = CoronalView,
             [SlicePlane.Sagittal] = SagittalView,
         };
+        _homeCells = new()
+        {
+            [AxialView] = (0, 0),
+            [CoronalView] = (0, 1),
+            [SagittalView] = (1, 0),
+            [VolumeView] = (1, 1),
+        };
 
         foreach (var (plane, view) in _views)
         {
@@ -80,7 +111,7 @@ public sealed partial class ViewerPage : Page
             view.ImagePressed += (_, e) => OnPointer(p, 0, e.Col, e.Row);
             view.ImageDragged += (_, e) => OnPointer(p, 1, e.Col, e.Row);
             view.ImageReleased += (_, e) => OnPointer(p, 2, e.Col, e.Row);
-            view.DescribePoint = (c, r) => Describe(p, c, r);
+            view.FullScreenRequested += (_, _) => ToggleFullScreen(view);
         }
 
         VolumeView.Rotated += (_, d) =>
@@ -95,6 +126,7 @@ public sealed partial class ViewerPage : Page
             _zoom = Math.Clamp(_zoom * factor, 0.6, 4);
             Request3D();
         };
+        VolumeView.FullScreenRequested += (_, _) => ToggleFullScreen(VolumeView);
 
         foreach (var (name, _) in WindowLevel.Presets) PresetBox.Items.Add(name);
         _suppressPresetEvent = true;
@@ -103,14 +135,25 @@ public sealed partial class ViewerPage : Page
         _suppressPresetEvent = false;
 
         AnnotationList.ItemsSource = _rows;
+        ApplyTechnicalDetails();
         Loaded += OnLoaded;
     }
+
+    private bool Technical => _services.ShowTechnicalDetails;
+
+    private bool OrgansVisible => OrgansToggle.IsChecked == true;
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         if (e.Parameter is "secondary") NewWindowButton.Visibility = Visibility.Collapsed;
         await OpenSeriesAsync(_services.CurrentSeriesId);
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        if (_fullScreenView is not null) ExitFullScreen();
     }
 
     // The page is cached while other pages are shown, so it stays subscribed and keeps following
@@ -124,6 +167,8 @@ public sealed partial class ViewerPage : Page
         _services.Hub.ViewportReceived += Hub_ViewportReceived;
         _services.Hub.Activity += Hub_Activity;
         _services.CurrentSeriesChanged += Services_CurrentSeriesChanged;
+        _services.TechnicalDetailsChanged += Services_TechnicalDetailsChanged;
+        _services.SegmentationChanged += Services_SegmentationChanged;
         RefreshMarkup();
     }
 
@@ -135,33 +180,77 @@ public sealed partial class ViewerPage : Page
         _services.Hub.ViewportReceived -= Hub_ViewportReceived;
         _services.Hub.Activity -= Hub_Activity;
         _services.CurrentSeriesChanged -= Services_CurrentSeriesChanged;
+        _services.TechnicalDetailsChanged -= Services_TechnicalDetailsChanged;
+        _services.SegmentationChanged -= Services_SegmentationChanged;
+        _segmentCts?.Cancel();
     }
 
     private void Services_CurrentSeriesChanged(object? sender, EventArgs e) =>
         DispatcherQueue.TryEnqueue(async () => await OpenSeriesAsync(_services.CurrentSeriesId));
+
+    private void Services_TechnicalDetailsChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(async () =>
+    {
+        ApplyTechnicalDetails();
+        UpdateSubtitle();
+        UpdateSyncText();
+        RefreshSegmentationUi();
+        await RefreshAllAsync();
+    });
+
+    private void Services_SegmentationChanged(object? sender, string seriesId) => DispatcherQueue.TryEnqueue(async () =>
+    {
+        if (seriesId != _seriesId) return;
+        _hiddenStructures.Clear();
+        OrgansToggle.IsChecked = true;
+        RefreshSegmentationUi();
+        await RefreshAllAsync();
+    });
+
+    private void ApplyTechnicalDetails()
+    {
+        foreach (var (plane, view) in _views)
+        {
+            var p = plane;
+            view.DescribePoint = Technical ? (c, r) => Describe(p, c, r) : null;
+        }
+    }
 
     private async Task OpenSeriesAsync(string? seriesId)
     {
         bool has = seriesId is not null && _services.Daemon.LoadedSeries.Any(s => s.Id == seriesId);
         NoSeriesPanel.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
         ViewportGrid.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
+        FindOrgansButton.IsEnabled = has && _segmentCts is null;
         if (!has)
         {
             _seriesId = null;
             SeriesTitle.Text = "Viewer";
-            SeriesSubtitle.Text = "No series open";
+            SeriesSubtitle.Text = "No scan open";
+            RefreshSegmentationUi();
             return;
         }
         if (seriesId == _seriesId) return;
 
         _seriesId = seriesId;
         _geometry = _services.Daemon.GetGeometry(seriesId!);
-        var info = _services.CurrentSeries ?? _services.Daemon.LoadedSeries.First(s => s.Id == seriesId);
-        SeriesTitle.Text = info.Metadata.SeriesDescription;
-        SeriesSubtitle.Text = $"{info.Metadata.PatientDisplayName} ·{info.Metadata.PatientId} · {info.Metadata.Modality} · {info.Dimensions} · {info.SpacingText}";
+        _hiddenStructures.Clear();
+        UpdateSubtitle();
         ResetView();
         RefreshMarkup();
+        RefreshSegmentationUi();
         await RefreshAllAsync();
+    }
+
+    private void UpdateSubtitle()
+    {
+        var info = _services.Daemon.LoadedSeries.FirstOrDefault(s => s.Id == _seriesId);
+        if (info is null) return;
+        var m = info.Metadata;
+        SeriesTitle.Text = string.IsNullOrWhiteSpace(m.SeriesDescription) ? m.StudyDescription : m.SeriesDescription;
+        string date = m.StudyDate is DateTime d ? $" · {d:dd MMM yyyy}" : string.Empty;
+        SeriesSubtitle.Text = Technical
+            ? $"{m.PatientDisplayName} · {m.PatientId} · {m.Modality} · {info.Dimensions} · {info.SpacingText}"
+            : $"{m.PatientDisplayName} · {m.PatientId} · {m.Modality}{date}";
     }
 
     private void ResetView()
@@ -187,7 +276,11 @@ public sealed partial class ViewerPage : Page
         int version = _requestVersion[plane] = _requestVersion.GetValueOrDefault(plane) + 1;
         var slice = await _services.Daemon.GetSliceAsync(_seriesId, plane, _index[plane]);
         if (_requestVersion[plane] != version) return; // a newer request superseded this one
-        _views[plane].Show(slice, _window, MprSlicer.SliceCount(_geometry, plane));
+
+        var segmentation = OrgansVisible ? _services.SegmentationFor(_seriesId) : null;
+        byte[]? labels = segmentation?.Labels is { } all ? MprSlicer.ExtractLabels(_geometry, all, plane, slice.Index) : null;
+        _views[plane].Show(slice, _window, MprSlicer.SliceCount(_geometry, plane), Technical, labels,
+            label => _hiddenStructures.Contains(label) ? null : segmentation?.ColourOf(label));
         RefreshOverlay(plane);
     }
 
@@ -202,19 +295,9 @@ public sealed partial class ViewerPage : Page
     private void SetWindow(WindowLevel window, bool fromPreset)
     {
         _window = window;
-        if (!fromPreset)
-        {
-            _suppressPresetEvent = true;
-            PresetBox.SelectedIndex = -1;
-            _suppressPresetEvent = false;
-        }
-        else
-        {
-            int i = WindowLevel.Presets.Select(p => p.Value).ToList().IndexOf(window);
-            _suppressPresetEvent = true;
-            PresetBox.SelectedIndex = i;
-            _suppressPresetEvent = false;
-        }
+        _suppressPresetEvent = true;
+        PresetBox.SelectedIndex = fromPreset ? WindowLevel.Presets.Select(p => p.Value).ToList().IndexOf(window) : -1;
+        _suppressPresetEvent = false;
         foreach (var plane in _views.Keys) _ = RefreshPlaneAsync(plane);
     }
 
@@ -287,7 +370,7 @@ public sealed partial class ViewerPage : Page
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = "Add callout",
+            Title = "Add a note",
             Content = box,
             PrimaryButtonText = "Add",
             CloseButtonText = "Cancel",
@@ -400,9 +483,21 @@ public sealed partial class ViewerPage : Page
                 _renderAgain = false;
                 var (name, window, mode) = RenderModes[_renderMode];
                 double scale = XamlRoot?.RasterizationScale ?? 1;
-                int size = VolumeView.IsDragging ? 180 : Math.Clamp((int)(VolumeView.DisplaySize * scale * 0.75), 200, 480);
+                int max = _fullScreenView == VolumeView ? 720 : 480;
+                int size = VolumeView.IsDragging ? 180 : Math.Clamp((int)(VolumeView.DisplaySize * scale * 0.75), 200, max);
                 var request = new VolumeRenderRequest(_yaw, _pitch, size, window, mode, _zoom);
                 var image = await _services.Daemon.RenderVolumeAsync(_seriesId, request);
+
+                var segmentation = OrgansVisible ? _services.SegmentationFor(_seriesId) : null;
+                if (segmentation is not null)
+                {
+                    var layers = segmentation.Structures
+                        .Where(s => s.Mesh is not null && !_hiddenStructures.Contains(s.Label))
+                        .Select(s => new MeshLayer(s.Mesh!, s.Colour))
+                        .ToList();
+                    var geometry = _geometry;
+                    await Task.Run(() => MeshRenderer.Composite(geometry, request, layers, image.Bgra));
+                }
 
                 var markers = new List<VolumeMarker>();
                 foreach (var a in _services.Annotations.ForSeries(_seriesId))
@@ -414,18 +509,200 @@ public sealed partial class ViewerPage : Page
                     markers.Add(new VolumeMarker(x, y, a.DisplayLabel, a.IsRemote));
                 }
 
-                VolumeView.Show(image, $"{name} · {image.Elapsed.TotalMilliseconds:0} ms · {size}px · CPU", markers);
+                string info = Technical ? $"{name} · {image.Elapsed.TotalMilliseconds:0} ms · {size}px · CPU" : string.Empty;
+                VolumeView.Show(image, info, markers);
             }
             while (_renderAgain);
         }
         catch (Exception ex)
         {
-            SyncText.Text = $"3D render failed: {ex.Message}";
+            SyncText.Text = Technical ? $"3D render failed: {ex.Message}" : "The 3D view could not be drawn.";
         }
         finally
         {
             _rendering = false;
         }
+    }
+
+    // ---- Organ segmentation ------------------------------------------------------------------
+
+    private async void FindOrgans_Click(object sender, RoutedEventArgs e)
+    {
+        if (_seriesId is null || _segmentCts is not null) return;
+        var models = SegmentationModelInfo.All;
+        var choices = new RadioButtons { Header = "What should be outlined?", SelectedIndex = 0 };
+        foreach (var m in models) choices.Items.Add(m.DisplayName);
+        var description = new TextBlock
+        {
+            Text = models[0].Description,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+        };
+        choices.SelectionChanged += (_, _) =>
+        {
+            if (choices.SelectedIndex >= 0) description.Text = models[choices.SelectedIndex].Description;
+        };
+        var source = new InfoBar
+        {
+            IsOpen = true,
+            IsClosable = false,
+            Severity = _services.IsSignedIn ? InfoBarSeverity.Informational : InfoBarSeverity.Warning,
+            Title = _services.IsSignedIn ? "HoloRepository server" : "Offline demo",
+            Message = _services.IsSignedIn
+                ? "The scan is sent to your hospital's HoloRepository server for analysis. Results come back to this computer."
+                : "You are not signed in to the HoloRepository server, so a simple offline demo will be used instead of the hospital's models. Sign in under Settings.",
+        };
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "Find organs",
+            Content = new StackPanel { Spacing = 12, MinWidth = 420, Children = { choices, description, source } },
+            PrimaryButtonText = "Start",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary || choices.SelectedIndex < 0) return;
+        await RunSegmentationAsync(models[choices.SelectedIndex], _services.Segmentation);
+    }
+
+    private async Task RunSegmentationAsync(SegmentationModelInfo model, ISegmentationService service)
+    {
+        if (_seriesId is null) return;
+        string seriesId = _seriesId;
+        var series = _services.GetLoadedSeries(seriesId);
+        _segmentCts = new CancellationTokenSource();
+        FindOrgansButton.IsEnabled = false;
+        OrgansPanel.Visibility = Visibility.Visible;
+        SegmentProgressPanel.Visibility = Visibility.Visible;
+        SegmentProgressText.Text = "Starting…";
+        SegmentNoteText.Text = string.Empty;
+        var progress = new Progress<SegmentationProgress>(p => SegmentProgressText.Text = p.Message);
+
+        try
+        {
+            var result = await service.SegmentAsync(new SegmentationRequest(seriesId, series, model), progress, _segmentCts.Token);
+            _services.SetSegmentation(result);
+        }
+        catch (OperationCanceledException)
+        {
+            SegmentNoteText.Text = "Cancelled.";
+        }
+        catch (Exception ex)
+        {
+            SegmentNoteText.Text = $"Could not find organs. {ex.Message}";
+        }
+        finally
+        {
+            _segmentCts.Dispose();
+            _segmentCts = null;
+            SegmentProgressPanel.Visibility = Visibility.Collapsed;
+            FindOrgansButton.IsEnabled = _seriesId is not null;
+        }
+    }
+
+    private void CancelSegmentation_Click(object sender, RoutedEventArgs e) => _segmentCts?.Cancel();
+
+    private void RefreshSegmentationUi()
+    {
+        var result = _services.SegmentationFor(_seriesId);
+        OrgansToggle.IsEnabled = result is not null;
+        if (result is null)
+        {
+            StructureList.ItemsSource = null;
+            if (_segmentCts is null)
+            {
+                OrgansPanel.Visibility = Visibility.Collapsed;
+                SegmentNoteText.Text = string.Empty;
+            }
+            return;
+        }
+
+        OrgansPanel.Visibility = Visibility.Visible;
+        StructureList.ItemsSource = result.Structures.Select(s => new StructureRow(s, !_hiddenStructures.Contains(s.Label))).ToList();
+        string header = $"{result.Model.DisplayName} · {result.Source} · {result.CompletedAt.ToLocalTime():HH:mm}";
+        if (Technical) header += $" · model {result.Model.Id}";
+        SegmentNoteText.Text = string.IsNullOrEmpty(result.Note) ? header : $"{header}\n{result.Note}";
+    }
+
+    private async void StructureCheck_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox { Tag: byte label } box) return;
+        if (box.IsChecked == true) _hiddenStructures.Remove(label);
+        else _hiddenStructures.Add(label);
+        await RefreshAllAsync();
+    }
+
+    private async void OrgansToggle_Click(object sender, RoutedEventArgs e) => await RefreshAllAsync();
+
+    // ---- Full screen -------------------------------------------------------------------------
+
+    private void ToggleFullScreen(FrameworkElement view)
+    {
+        if (_fullScreenView == view)
+        {
+            ExitFullScreen();
+            return;
+        }
+        if (_fullScreenView is not null) ExitFullScreen();
+
+        _fullScreenView = view;
+        foreach (var child in _homeCells.Keys) child.Visibility = child == view ? Visibility.Visible : Visibility.Collapsed;
+        Grid.SetRow(view, 0);
+        Grid.SetColumn(view, 0);
+        Grid.SetRowSpan(view, 2);
+        Grid.SetColumnSpan(view, 2);
+        SetFullScreenIcon(view, true);
+
+        HeaderGrid.Visibility = Visibility.Collapsed;
+        SidePanel.Visibility = Visibility.Collapsed;
+        SideColumn.Width = new GridLength(0);
+        BodyGrid.ColumnSpacing = 0;
+        RootGrid.Padding = new Thickness(0);
+        RootGrid.RowSpacing = 0;
+
+        var window = WindowHelper.WindowFor(this);
+        window?.AppWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+        (window as MainWindow)?.SetImmersive(true);
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, Request3D);
+    }
+
+    private void ExitFullScreen()
+    {
+        if (_fullScreenView is not { } view) return;
+        _fullScreenView = null;
+        var (row, column) = _homeCells[view];
+        Grid.SetRow(view, row);
+        Grid.SetColumn(view, column);
+        Grid.SetRowSpan(view, 1);
+        Grid.SetColumnSpan(view, 1);
+        foreach (var child in _homeCells.Keys) child.Visibility = Visibility.Visible;
+        SetFullScreenIcon(view, false);
+
+        HeaderGrid.Visibility = Visibility.Visible;
+        SidePanel.Visibility = Visibility.Visible;
+        SideColumn.Width = new GridLength(300);
+        BodyGrid.ColumnSpacing = 12;
+        RootGrid.Padding = new Thickness(16, 8, 16, 16);
+        RootGrid.RowSpacing = 8;
+
+        var window = WindowHelper.WindowFor(this);
+        window?.AppWindow.SetPresenter(AppWindowPresenterKind.Default);
+        (window as MainWindow)?.SetImmersive(false);
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, Request3D);
+    }
+
+    private static void SetFullScreenIcon(FrameworkElement view, bool on)
+    {
+        if (view is SliceViewport s) s.IsFullScreen = on;
+        if (view is VolumeViewport v) v.IsFullScreen = on;
+    }
+
+    private void Escape_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (_fullScreenView is null) return;
+        ExitFullScreen();
+        args.Handled = true;
     }
 
     // ---- Collaboration -----------------------------------------------------------------------
@@ -468,9 +745,18 @@ public sealed partial class ViewerPage : Page
     private void UpdateSyncText()
     {
         var hub = _services.Hub;
-        SyncText.Text = hub.IsConnected
-            ? $"Live in {hub.SessionId} · {hub.Participants.Count} participants · last sync {hub.LastRoundTripMs:0} ms (budget {LoopbackCollaborationHub.LatencyBudgetMs:0} ms)"
-            : "Not in a consultation · markup stays on this device";
+        if (Technical)
+        {
+            SyncText.Text = hub.IsConnected
+                ? $"Live in {hub.SessionId} · {hub.Participants.Count} participants · last sync {hub.LastRoundTripMs:0} ms (budget {LoopbackCollaborationHub.LatencyBudgetMs:0} ms)"
+                : "Not in a consultation · markup stays on this device";
+        }
+        else
+        {
+            SyncText.Text = hub.IsConnected
+                ? $"In consultation with {Math.Max(0, hub.Participants.Count - 1)} colleagues"
+                : "Not in a consultation";
+        }
     }
 
     // ---- Commands ----------------------------------------------------------------------------
