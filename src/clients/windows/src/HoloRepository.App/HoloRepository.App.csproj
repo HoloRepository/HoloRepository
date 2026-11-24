@@ -6,6 +6,11 @@
     <RootNamespace>HoloRepository.App</RootNamespace>
     <AssemblyName>HoloRepository</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <!-- Keep the output path short: the Windows App SDK runtime can crash at startup when the app runs from a very
+         deep folder (e.g. a repository inside OneDrive\Documents\...). -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <Platforms>x64;ARM64</Platforms>
     <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
@@ -33,6 +38,7 @@
 
   <ItemGroup>
     <Content Include="Assets\*.png" />
+    <Content Include="Assets\AppIcon.ico" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 

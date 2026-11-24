@@ -18,6 +18,24 @@ public static class WindowHelper
         OpenWindows.Add(window);
         window.Closed += (_, _) => OpenWindows.Remove(window);
         ApplyTheme(window, AppServices.Current.Settings.Theme);
+        SetIcon(window);
+    }
+
+    /// <summary>Uses the HoloRepository icon for the window's title bar, taskbar button and Alt+Tab.</summary>
+    public static void SetIcon(Window window)
+    {
+        string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
+        if (!File.Exists(icon)) return;
+        try
+        {
+            window.AppWindow.SetIcon(icon);
+        }
+        catch (ArgumentException)
+        {
+        }
+        catch (System.Runtime.InteropServices.COMException)
+        {
+        }
     }
 
     public static ElementTheme ParseTheme(string theme) => theme switch
