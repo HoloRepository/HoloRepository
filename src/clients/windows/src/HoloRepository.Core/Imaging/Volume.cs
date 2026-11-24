@@ -49,6 +49,15 @@ public sealed class Volume
     public VoxelSpacing Spacing { get; }
     public short[] Voxels { get; }
 
+    /// <summary>Where the volume sits in patient (DICOM LPS) space. Defaults to an axis-aligned frame at the origin.</summary>
+    public PatientFrame Frame { get; init; } = PatientFrame.Identity;
+
+    /// <summary>Converts a volume-space position (mm, as used by <see cref="MprSlicer"/>) to patient LPS millimetres.</summary>
+    public Point3 ToPatient(Point3 volumeMm) => Frame.ToPatient(volumeMm, Spacing);
+
+    /// <summary>Converts a patient LPS position to volume-space millimetres.</summary>
+    public Point3 FromPatient(Point3 lps) => Frame.FromPatient(lps, Spacing);
+
     public double PhysicalWidth => Width * Spacing.X;
     public double PhysicalHeight => Height * Spacing.Y;
     public double PhysicalDepth => Depth * Spacing.Z;

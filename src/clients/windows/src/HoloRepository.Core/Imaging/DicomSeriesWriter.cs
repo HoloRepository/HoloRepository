@@ -57,8 +57,12 @@ public static class DicomSeriesWriter
 
             ds.Add(DicomTag.PixelSpacing, Ds(v.Spacing.Y), Ds(v.Spacing.X));
             ds.Add(DicomTag.SliceThickness, Ds(v.Spacing.Z));
-            ds.Add(DicomTag.ImagePositionPatient, "0", "0", Ds(z * v.Spacing.Z));
-            ds.Add(DicomTag.ImageOrientationPatient, "1", "0", "0", "0", "1", "0");
+            var f = v.Frame;
+            var position = v.ToPatient(v.VoxelToMm(0, 0, z));
+            ds.Add(DicomTag.ImagePositionPatient, Ds(position.X), Ds(position.Y), Ds(position.Z));
+            ds.Add(DicomTag.ImageOrientationPatient,
+                Ds(f.XDirection.X), Ds(f.XDirection.Y), Ds(f.XDirection.Z),
+                Ds(f.YDirection.X), Ds(f.YDirection.Y), Ds(f.YDirection.Z));
 
             var bytes = new byte[perSlice * 2];
             Buffer.BlockCopy(v.Voxels, z * perSlice * 2, bytes, 0, bytes.Length);

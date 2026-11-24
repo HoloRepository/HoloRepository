@@ -74,6 +74,38 @@ public static class MprSlicer
         }
     }
 
+    /// <summary>Extracts the matching slice of a label map that is aligned voxel-for-voxel with <paramref name="v"/>.</summary>
+    public static byte[] ExtractLabels(Volume v, byte[] labels, SlicePlane plane, int index)
+    {
+        if (labels.LongLength != (long)v.Width * v.Height * v.Depth)
+            throw new ArgumentException("Label map does not match the volume.", nameof(labels));
+        index = Math.Clamp(index, 0, SliceCount(v, plane) - 1);
+        switch (plane)
+        {
+            case SlicePlane.Axial:
+            {
+                var px = new byte[v.Width * v.Height];
+                Array.Copy(labels, v.IndexOf(0, 0, index), px, 0, px.Length);
+                return px;
+            }
+            case SlicePlane.Coronal:
+            {
+                var px = new byte[v.Width * v.Depth];
+                for (int r = 0; r < v.Depth; r++)
+                    Array.Copy(labels, v.IndexOf(0, index, v.Depth - 1 - r), px, r * v.Width, v.Width);
+                return px;
+            }
+            default:
+            {
+                var px = new byte[v.Height * v.Depth];
+                for (int r = 0; r < v.Depth; r++)
+                for (int c = 0; c < v.Height; c++)
+                    px[r * v.Height + c] = labels[v.IndexOf(index, c, v.Depth - 1 - r)];
+                return px;
+            }
+        }
+    }
+
     /// <summary>Converts a continuous pixel position on a slice to patient-space millimetres.</summary>
     public static Point3 SliceToPoint(Volume v, SlicePlane plane, int index, double col, double row)
     {
