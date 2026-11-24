@@ -11,7 +11,7 @@ Prototype of the **HoloRepository 2027** Windows client: a native WinUI 3 applic
 | Area | In the app | Brief |
 |---|---|---|
 | Native Windows client | WinUI 3 (Windows App SDK 1.6), Mica, dark "reading room" and light themes, pop-out viewer windows, full-screen viewports, MSIX packaging | FR-01 |
-| Study ingestion | Opens a folder of DICOM files (grouped by series, sorted along the slice normal, rescale applied, patient position kept) or a synthetic chest CT. NIfTI images can be read and re-oriented for display | FR-03 |
+| Study ingestion | Opens DICOM from folders (including DICOMDIR layouts), individual files, `.zip` archives, drag and drop, or the command line. See [DICOM support](#dicom-support). Also includes a synthetic chest CT, and NIfTI images can be read and re-oriented | FR-03 |
 | Viewing | Axial / coronal / sagittal MPR with tissue presets, crosshair sync and a 3D view (volume compositing or MIP). Any of the four views can be made full screen | FR-02, FR-04 |
 | Finding organs | *Find organs* sends the scan to the HoloRepository server with the chosen model (`nv-segment-ct`, kidney, liver, head and neck), then shows the returned segmentation as colour on every slice and as 3D surfaces, with per-structure volumes and show/hide. An offline demo is used when not signed in | FR-10 |
 | Spatial markup | Pins, measurements (mm) and notes stored in patient coordinates, shown on every plane and in 3D | FR-06 |
@@ -26,6 +26,19 @@ Simulated or not yet implemented: GPU kernels (CUDA, OpenVINO/oneAPI), the Webex
 | Studies | Consultation | Clinical notes |
 |---|---|---|
 | ![Studies](docs/images/studies.png) | ![Consultation](docs/images/consultation.png) | ![Notes](docs/images/notes.png) |
+
+## DICOM support
+
+| | Supported |
+|---|---|
+| Sources | Folders (searched recursively, so DICOMDIR layouts work), one or more files, `.zip` archives, drag and drop onto the Studies page, and `HoloRepository.exe <folder or files>` |
+| Series | Every series found is listed; when there are several, the user chooses one. Slices are ordered along the slice normal using ImagePositionPatient / ImageOrientationPatient |
+| Transfer syntaxes | Uncompressed (implicit/explicit VR), RLE, JPEG baseline/extended/lossless, JPEG-LS and JPEG 2000, through the native `fo-dicom.Codecs` package (Windows x64 and ARM64) |
+| Pixel data | 8/16/32-bit, signed or unsigned, any BitsStored (unused bits are masked), RescaleSlope/Intercept, and MONOCHROME1 (inverted for display) |
+| Multi-frame | Enhanced CT/MR (per-frame position, orientation, pixel measures and rescale from the functional groups) and legacy multi-frame |
+| Clean-up | Scout or localiser images of a different size or orientation are left out, and repeated positions (for example other phases) are reduced to the first, each with a message to the user. Non-image objects (DICOMDIR, structured reports) are skipped |
+| Display | Opens with the window stored in the header; CT without one uses the lung preset, and other modalities (MR, X-ray) get a window computed from the image |
+| Not yet | Colour images (ultrasound, photographs) are listed but cannot be opened |
 
 ## HoloRepository server integration
 
@@ -63,9 +76,9 @@ Day-to-day builds run **unpackaged**, so no certificate or Developer Mode is nee
 dotnet test tests/HoloRepository.Core.Tests --collect:"XPlat Code Coverage"
 ```
 
-The core library has 96 unit tests, with over 90% line coverage. They cover:
+The core library has 109 unit tests, with over 90% line coverage. They cover:
 
-- DICOM and NIfTI reading, MPR geometry and rendering
+- DICOM reading (compressed syntaxes, Enhanced multi-frame, ZIP archives, scouts), NIfTI reading, MPR geometry and rendering
 - MZ3 meshes and surface extraction
 - the server API client, run against an in-memory fake of the contract
 - markup sync, terminology and readability
@@ -94,7 +107,7 @@ Every push and pull request runs the GitHub Actions workflow, which tests, enfor
 
 ## Trying it out
 
-1. **Studies**: choose *Open sample chest CT*, or *Open scan folder…* for your own uncompressed CT/MR DICOM series.
+1. **Studies**: choose *Open sample chest CT*, *Open scan folder…* or *Open DICOM files…* (which also accepts `.zip` archives), or drag a scan onto the page. If several series are found, pick the one to open.
 2. **Viewer**: use the mouse wheel to change slice and right-drag for brightness and contrast. Pick **Pin**, **Measure** or **Note** and click a slice. Drag the 3D view to rotate it. Use the corner button on any view (or double-click the 3D view) for full screen, and press Esc to return. *New window* opens a second viewer that shares the same markup.
 3. **Find organs**: choose a model, then *Start*. Structures appear in colour on the slices and in 3D, and the side panel lists each one with its volume and a show/hide checkbox.
 4. **Consultation**: *Start consultation*, then press **Capture** to replay a sample MDT discussion. With technical details on, *Simulate colleague pin* and *Simulate colleague viewport* show remote markup and viewport sync.
