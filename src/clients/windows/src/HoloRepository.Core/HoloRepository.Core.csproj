@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>HoloRepository.Core</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="fo-dicom" Version="5.2.5" />
+    <!-- Native JPEG, JPEG-LS, JPEG 2000 and RLE codecs (win-x64 / win-arm64) for compressed DICOM. -->
+    <PackageReference Include="fo-dicom.Codecs" Version="5.16.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="HoloRepository.Core.Tests" />
+  </ItemGroup>
+</Project>

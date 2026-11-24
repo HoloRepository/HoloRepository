@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "HoloRepository (Unpackaged)": {
+      "commandName": "Project"
+    },
+    "HoloRepository (Package)": {
+      "commandName": "MsixPackage"
+    }
+  }
+}
