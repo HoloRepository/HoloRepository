@@ -17,12 +17,12 @@
 
         <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="16,0,140,0">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Image Source="ms-appx:///Assets/Square44x44Logo.png" Width="18" Height="18" />
+                <Image Source="ms-appx:///Assets/Square44x44Logo.png" Width="20" Height="20" />
                 <TextBlock Text="HoloRepository" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <TextBlock Text="Windows · research prototype" Style="{StaticResource CaptionTextBlockStyle}"
+                <TextBlock Text="Research prototype · not for diagnostic use" Style="{StaticResource CaptionTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="6">
+            <StackPanel x:Name="DaemonBadgePanel" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="6">
                 <Ellipse Width="8" Height="8" Fill="{ThemeResource HoloSuccessBrush}" />
                 <TextBlock x:Name="DaemonBadge" Text="Local daemon online · no cloud egress" Style="{StaticResource CaptionTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

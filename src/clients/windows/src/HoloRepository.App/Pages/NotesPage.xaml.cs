@@ -23,7 +23,10 @@ public sealed partial class NotesPage : Page
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        EngineText.Text = $"Dual-tier notes from the consultation · engine: {_services.NoteGenerator.Name}";
+        EngineText.Text = _services.ShowTechnicalDetails
+            ? $"Dual-tier notes from the consultation · engine: {_services.NoteGenerator.Name}"
+            : "A note for the clinical team and a plain-English summary for the patient, written from the discussion.";
+        ReadabilityDetail.Visibility = _services.TechnicalVisibility;
         if (_services.Transcript.IsEmpty)
         {
             ShowStatus(InfoBarSeverity.Informational, "No consultation captured yet",

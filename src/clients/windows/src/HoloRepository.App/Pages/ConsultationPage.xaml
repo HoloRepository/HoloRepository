@@ -16,7 +16,7 @@
 
         <StackPanel>
             <TextBlock Text="MDT consultation" Style="{StaticResource PageTitleStyle}" />
-            <TextBlock Text="Video conferencing, synchronised viewports and shared markup, with consultation capture for note generation."
+            <TextBlock Text="Meet with the MDT, look at the scan together and capture the discussion for the clinical notes."
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
@@ -62,8 +62,8 @@
                         </Grid.RowDefinitions>
                         <StackPanel Spacing="4">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Conference" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <Border Background="{ThemeResource HoloTileBrush}" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                <TextBlock Text="Video call" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <Border x:Name="WebexBadge" Background="{ThemeResource HoloTileBrush}" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
                                     <TextBlock Text="Webex SDK integration point · simulated" FontSize="11" Foreground="{ThemeResource HoloAccentBrush}" />
                                 </Border>
                             </StackPanel>
@@ -88,7 +88,7 @@
                         </GridView>
                         <TextBlock x:Name="NoCallText" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   Text="Start a consultation to bring in the MDT. Video tiles, audio and the data channel are simulated in this prototype; the Webex Meetings SDK replaces them in the production client." />
+                                   Text="Start a consultation to bring in the MDT. In this prototype the colleagues and video are simulated." />
 
                         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                             <ToggleButton x:Name="MicToggle" IsChecked="True" IsEnabled="False" AutomationProperties.Name="Microphone" ToolTipService.ToolTip="Microphone">
@@ -97,12 +97,12 @@
                             <ToggleButton x:Name="CameraToggle" IsChecked="True" IsEnabled="False" AutomationProperties.Name="Camera" ToolTipService.ToolTip="Camera">
                                 <SymbolIcon Symbol="Video" />
                             </ToggleButton>
-                            <ToggleSwitch x:Name="ShareToggle" OnContent="Sharing my viewport" OffContent="Viewport not shared" IsOn="True" Toggled="ShareToggle_Toggled" Margin="12,0,0,0" />
+                            <ToggleSwitch x:Name="ShareToggle" OnContent="Colleagues follow my view" OffContent="My view is private" IsOn="True" Toggled="ShareToggle_Toggled" Margin="12,0,0,0" />
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                <StackPanel x:Name="SimulationPanel" Grid.Row="2" Orientation="Horizontal" Spacing="8">
                     <Button x:Name="RemotePinButton" IsEnabled="False" Click="RemotePin_Click">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <SymbolIcon Symbol="MapPin" />
@@ -124,7 +124,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock Text="Sync activity" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="Activity" Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <ListView x:Name="ActivityList" Grid.Row="1" SelectionMode="None">
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="markup:SyncEvent">
@@ -152,8 +152,8 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="Consultation capture" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                            <TextBlock Text="ClinicAVT speech-to-text (simulated) · processed locally" Style="{StaticResource CaptionTextBlockStyle}"
+                            <TextBlock Text="Discussion" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Name="CaptureSubtitle" Text="Transcribed on this computer" Style="{StaticResource CaptionTextBlockStyle}"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Spacing="6">

@@ -20,12 +20,17 @@
         <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="8,3" CornerRadius="4" Background="#99000000" IsHitTestVisible="False">
             <TextBlock x:Name="TitleText" Foreground="#4FD1D9" FontWeight="SemiBold" FontSize="12" />
         </Border>
+        <Button x:Name="FullScreenButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Padding="7"
+                Background="#99000000" BorderThickness="0" Click="FullScreen_Click"
+                AutomationProperties.Name="Full screen" ToolTipService.ToolTip="Full screen">
+            <FontIcon x:Name="FullScreenIcon" Glyph="&#xE740;" FontSize="14" Foreground="White" />
+        </Button>
         <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8" Padding="8,3" CornerRadius="4" Background="#99000000" IsHitTestVisible="False">
             <TextBlock x:Name="InfoText" Foreground="#DDFFFFFF" FontSize="11" FontFamily="Consolas" />
         </Border>
         <Border x:Name="CursorBadge" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8" Padding="8,3" CornerRadius="4" Background="#99000000" IsHitTestVisible="False">
             <TextBlock x:Name="CursorText" Foreground="#DDFFFFFF" FontSize="11" FontFamily="Consolas" />
         </Border>
-        <TextBlock x:Name="EmptyText" Text="No series loaded" Foreground="#88FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
+        <TextBlock x:Name="EmptyText" Text="No scan open" Foreground="#88FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
     </Grid>
 </UserControl>

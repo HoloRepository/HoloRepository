@@ -54,15 +54,29 @@ public sealed partial class ConsultationPage : Page
     public static string FormatOffset(TimeSpan offset) => offset.ToString(@"mm\:ss");
 
     public static string FormatEvent(DateTimeOffset at, string description, double? latencyMs) =>
-        $"{at:HH:mm:ss}  {description}" + (latencyMs is double ms ? $"  ({ms:0} ms)" : string.Empty);
+        $"{at:HH:mm:ss}  {description}" +
+        (latencyMs is double ms && AppServices.Current.ShowTechnicalDetails ? $"  ({ms:0} ms)" : string.Empty);
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         NameBox.Text = _services.Settings.DisplayName;
+        ApplyTechnicalDetails();
         _lines.Clear();
         foreach (var l in _services.Transcript.Lines) _lines.Add(l);
         UpdateTranscriptState();
+        UpdateCallState();
+    }
+
+    /// <summary>Simulation controls, integration labels and latency figures are only shown in technical mode.</summary>
+    private void ApplyTechnicalDetails()
+    {
+        var visibility = _services.TechnicalVisibility;
+        WebexBadge.Visibility = visibility;
+        SimulationPanel.Visibility = visibility;
+        CaptureSubtitle.Text = _services.ShowTechnicalDetails
+            ? "ClinicAVT speech-to-text (simulated) · processed locally"
+            : "Transcribed on this computer";
         UpdateCallState();
     }
 
@@ -76,7 +90,9 @@ public sealed partial class ConsultationPage : Page
         JoinIcon.Symbol = on ? Symbol.Cancel : Symbol.Video;
         MicToggle.IsEnabled = CameraToggle.IsEnabled = RemotePinButton.IsEnabled = RemoteViewButton.IsEnabled = on;
         SessionBox.IsEnabled = NameBox.IsEnabled = !on;
-        CallStatus.Text = on ? $"{hub.SessionId} · {hub.Participants.Count} participants · encrypted (simulated)" : "Not connected";
+        CallStatus.Text = !on ? "Not connected"
+            : _services.ShowTechnicalDetails ? $"{hub.SessionId} · {hub.Participants.Count} participants · encrypted (simulated)"
+            : $"{hub.SessionId} · {hub.Participants.Count} people in the call";
         UpdateLatency();
     }
 

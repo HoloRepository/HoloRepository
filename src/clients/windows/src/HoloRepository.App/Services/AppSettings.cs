@@ -25,6 +25,14 @@ public sealed class AppSettings
 
     public string DisplayName { get; set; } = "Dr Local User";
 
+    /// <summary>When false (the default for clinicians), engineering details are hidden throughout the app.</summary>
+    public bool ShowTechnicalDetails { get; set; }
+
+    /// <summary>Base address of the HoloRepository server (FastAPI).</summary>
+    public string ServerAddress { get; set; } = "http://127.0.0.1:8000/";
+
+    public string ServerUsername { get; set; } = string.Empty;
+
     public static AppSettings Load()
     {
         try
