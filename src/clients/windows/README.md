@@ -1,28 +1,42 @@
 # HoloRepository for Windows
 
-Prototype of the **HoloRepository 2027** Windows client: a native WinUI 3 application, packaged as MSIX, for examining volumetric imaging, running multidisciplinary team (MDT) consultations with shared spatial markup, and producing clinical and patient-facing notes.
+Prototype of the **HoloRepository 2027** Windows client: a native WinUI 3 application, packaged as MSIX, for examining volumetric imaging, finding organs with the HoloRepository server's segmentation models, running multidisciplinary team (MDT) consultations with shared spatial markup, and producing clinical and patient-facing notes.
 
 > **Research prototype.** Not a medical device and not for diagnostic use. The repository contains no patient data; the app ships with a synthetic chest CT.
 
-![Viewer with MPR, 3D and shared markup](docs/images/viewer.png)
+![Viewer with organs found, MPR, 3D and markup](docs/images/viewer.png)
 
 ## What the prototype does
 
 | Area | In the app | Brief |
 |---|---|---|
-| Native Windows client | WinUI 3 (Windows App SDK 1.6), Mica, dark "reading room" and light themes, pop-out viewer windows, MSIX packaging | FR-01 |
-| Study ingestion | Opens a folder of DICOM files (grouped by series, sorted along the slice normal, rescale applied) or generates a synthetic chest CT. Can export a series back to DICOM | FR-03 |
-| Viewing | Axial / coronal / sagittal MPR with window/level presets, crosshair sync, HU readout, and a 3D view (volume compositing or MIP) | FR-02, FR-04 |
-| Spatial markup | Pins, calipers (mm) and callouts stored in patient coordinates, shown on every plane and in 3D | FR-06 |
-| Consultation | Webex integration point with simulated participants, viewport and markup sync with latency against the 150 ms budget, and consultation capture (ClinicAVT stand-in) | FR-05, FR-06 |
+| Native Windows client | WinUI 3 (Windows App SDK 1.6), Mica, dark "reading room" and light themes, pop-out viewer windows, full-screen viewports, MSIX packaging | FR-01 |
+| Study ingestion | Opens a folder of DICOM files (grouped by series, sorted along the slice normal, rescale applied, patient position kept) or a synthetic chest CT. NIfTI images can be read and re-oriented for display | FR-03 |
+| Viewing | Axial / coronal / sagittal MPR with tissue presets, crosshair sync and a 3D view (volume compositing or MIP). Any of the four views can be made full screen | FR-02, FR-04 |
+| Finding organs | *Find organs* sends the scan to the HoloRepository server with the chosen model (`nv-segment-ct`, kidney, liver, head and neck), then shows the returned segmentation as colour on every slice and as 3D surfaces, with per-structure volumes and show/hide. An offline demo is used when not signed in | FR-10 |
+| Spatial markup | Pins, measurements (mm) and notes stored in patient coordinates, shown on every plane and in 3D | FR-06 |
+| Consultation | Webex integration point with simulated participants, viewport and markup sync, and consultation capture (ClinicAVT stand-in) | FR-05, FR-06 |
 | Clinical notes | Structured MDT note plus a plain-language patient summary with a measured reading age (target ≤ 9), SNOMED CT grounding, NICE guideline links, and Markdown export | FR-07, FR-09 |
-| Compute daemon | All imaging work goes through `IComputeDaemonClient`. The prototype runs it in-process with no network access, detects CUDA / Intel GPU / ARM64 hardware, and renders on the CPU | FR-03, FR-04, FR-08 |
+| Compute daemon | All imaging work goes through `IComputeDaemonClient`. The prototype runs it in-process, detects CUDA / Intel GPU / ARM64 hardware, and renders on the CPU | FR-03, FR-04, FR-08 |
 
-Simulated or not yet implemented: GPU kernels (CUDA, OpenVINO/oneAPI), the Webex SDK, Granite 4.1 and ClinicAVT models, the MCP server, segmentation, translations, and the macOS and mobile clients. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for where each of these plugs in.
+The interface is written for clinicians. Engineering details (compute status, server address, latency figures, simulation controls, HU and window readouts) are hidden until **Settings › Advanced › Show technical details** is turned on.
+
+Simulated or not yet implemented: GPU kernels (CUDA, OpenVINO/oneAPI), the Webex SDK, Granite 4.1 and ClinicAVT models, the MCP server, translations, and the macOS and mobile clients. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for where each of these plugs in.
 
 | Studies | Consultation | Clinical notes |
 |---|---|---|
 | ![Studies](docs/images/studies.png) | ![Consultation](docs/images/consultation.png) | ![Notes](docs/images/notes.png) |
+
+## HoloRepository server integration
+
+The client talks to the HoloRepository FastAPI server (`src/server` on the `server-init` branch of [HoloRepository/HoloRepository](https://github.com/HoloRepository/HoloRepository/tree/server-init)) using its API contract v0.1.0:
+
+1. **Settings › HoloRepository account**: sign in (`POST /token`) or create an account (`POST /signup`).
+2. **Viewer › Find organs**: the series is zipped as DICOM (the original folder when there is one) and uploaded with the chosen model (`POST /new-job`).
+3. The app polls `GET /job-status` until the job is `done`, finds the new record with `GET /records`, and downloads its `nifti_segmented` and `mz3` files (`GET /files/{id}`).
+4. The label map is resampled onto the open series through patient coordinates, and the `.mz3` mesh is converted from RAS (NiiVue convention) into the series' space.
+
+The server address is under **Settings › Advanced** (default `http://127.0.0.1:8000/`). Without a sign-in, *Find organs* uses an offline demo based on simple CT thresholds. It is clearly labelled as a demo and is not a trained model.
 
 ## Getting started
 
@@ -41,13 +55,22 @@ dotnet run --project src/HoloRepository.App -p:Platform=x64
 
 Day-to-day builds run **unpackaged**, so no certificate or Developer Mode is needed. In Visual Studio, pick the `HoloRepository (Unpackaged)` launch profile.
 
+> Keep the clone at a reasonably short path. When the app runs from a very deep folder (for example inside `OneDrive\Documents\...`), the Windows App SDK runtime can crash at startup. The project already keeps its output path short to avoid this.
+
 ### Test
 
 ```powershell
 dotnet test tests/HoloRepository.Core.Tests --collect:"XPlat Code Coverage"
 ```
 
-The core library has 66 unit tests covering DICOM round-trips, MPR geometry, rendering, markup sync, terminology and readability, with over 90% line coverage. CI fails if coverage drops below 80%.
+The core library has 96 unit tests, with over 90% line coverage. They cover:
+
+- DICOM and NIfTI reading, MPR geometry and rendering
+- MZ3 meshes and surface extraction
+- the server API client, run against an in-memory fake of the contract
+- markup sync, terminology and readability
+
+CI fails if coverage drops below 80%.
 
 ### Package as MSIX
 
@@ -71,17 +94,21 @@ Every push and pull request runs the GitHub Actions workflow, which tests, enfor
 
 ## Trying it out
 
-1. **Studies**: choose *Load sample chest CT*, or *Open DICOM folder…* for your own uncompressed CT/MR series. *Export selected as DICOM…* writes the phantom out as a DICOM series, which is handy for testing the import path.
-2. **Viewer**: use the mouse wheel to change slice and right-drag for window/level. Pick **Pin**, **Measure** or **Callout** and click a slice. Drag the 3D view to rotate it. *New window* opens a second viewer that shares the same markup.
-3. **Consultation**: *Start consultation*, then try *Simulate colleague pin* and *Simulate colleague viewport* to see remote markup and viewport sync. Press **Capture** to replay a sample MDT discussion.
-4. **Clinical notes**: generates the MDT note and the patient summary from the transcript and the markup. Use *Export Markdown…* to save them.
+1. **Studies**: choose *Open sample chest CT*, or *Open scan folder…* for your own uncompressed CT/MR DICOM series.
+2. **Viewer**: use the mouse wheel to change slice and right-drag for brightness and contrast. Pick **Pin**, **Measure** or **Note** and click a slice. Drag the 3D view to rotate it. Use the corner button on any view (or double-click the 3D view) for full screen, and press Esc to return. *New window* opens a second viewer that shares the same markup.
+3. **Find organs**: choose a model, then *Start*. Structures appear in colour on the slices and in 3D, and the side panel lists each one with its volume and a show/hide checkbox.
+4. **Consultation**: *Start consultation*, then press **Capture** to replay a sample MDT discussion. With technical details on, *Simulate colleague pin* and *Simulate colleague viewport* show remote markup and viewport sync.
+5. **Clinical notes**: generates the MDT note and the patient summary from the transcript and the markup. Use *Export Markdown…* to save them.
+
+![3D view in full screen](docs/images/fullscreen-3d.png)
 
 ## Repository layout
 
 ```
 src/HoloRepository.Core/        UI-independent library (net8.0)
-  Imaging/                      Volume, DICOM loader/writer, phantom, window/level, MPR, ray caster
+  Imaging/                      Volume, patient frame, DICOM/NIfTI/MZ3, phantom, MPR, ray caster, mesh renderer
   Daemon/                       IComputeDaemonClient, in-process implementation, hardware probe
+  Segmentation/                 HoloRepository API client, server and offline-demo segmentation
   Markup/                       Annotations, annotation store, collaboration hub
   Notes/                        Transcript, terminology grounding, readability, note generation
 src/HoloRepository.App/         WinUI 3 client (single-project MSIX)
@@ -95,6 +122,6 @@ docs/                           Architecture notes and screenshots
 
 ## Privacy
 
-- Pixel data and transcripts are processed on the local machine. The in-process daemon makes no network calls.
-- The app has no telemetry. Settings live in `%LOCALAPPDATA%\HoloRepository\settings.json`, and unexpected errors are logged to `%LOCALAPPDATA%\HoloRepository\logs\app.log`.
+- Scans and transcripts are processed on this computer. A scan leaves the machine only when a signed-in user chooses *Find organs*; it is then sent to the configured HoloRepository server.
+- The app has no telemetry. Settings live in `%LOCALAPPDATA%\HoloRepository\settings.json` (passwords are never stored), and unexpected errors are logged to `%LOCALAPPDATA%\HoloRepository\logs\app.log`.
 - The SNOMED CT table is a small illustrative subset. Verify codes in the [NHS SNOMED CT browser](https://termbrowser.nhs.uk/) before relying on them.
