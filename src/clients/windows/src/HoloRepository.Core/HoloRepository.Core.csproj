@@ -5,7 +5,9 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="fo-dicom" Version="5.1.3" />
+    <PackageReference Include="fo-dicom" Version="5.2.5" />
+    <!-- Native JPEG, JPEG-LS, JPEG 2000 and RLE codecs (win-x64 / win-arm64) for compressed DICOM. -->
+    <PackageReference Include="fo-dicom.Codecs" Version="5.16.7" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="HoloRepository.Core.Tests" />

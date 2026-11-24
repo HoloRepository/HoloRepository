@@ -69,6 +69,14 @@ public interface IComputeDaemonClient
     Task<SeriesInfo> LoadDicomDirectoryAsync(string directory, IProgress<double>? progress = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Finds the DICOM series in any mix of files, folders and ZIP archives.</summary>
+    Task<DicomScanResult> ScanDicomAsync(IEnumerable<string> paths, IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Loads one series from a previous scan.</summary>
+    Task<SeriesInfo> LoadDicomSeriesAsync(DicomScanResult scan, string seriesInstanceUid, IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default);
+
     Task ExportSeriesAsDicomAsync(string seriesId, string directory, CancellationToken cancellationToken = default);
 
     Task<SliceImage> GetSliceAsync(string seriesId, SlicePlane plane, int index, CancellationToken cancellationToken = default);
