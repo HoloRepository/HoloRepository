@@ -6,7 +6,8 @@
     <RootNamespace>HoloRepository.App</RootNamespace>
     <AssemblyName>HoloRepository</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- Short output path (bind\Debug). Windows App SDK 1.6 could crash at startup from very deep folders;
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <!-- Short output path (bin\x64\Debug). Windows App SDK 1.6 could crash at startup from very deep folders;
          1.7 fixes that, and a shorter path still keeps well clear of MAX_PATH. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
@@ -37,6 +38,7 @@
 
   <ItemGroup>
     <Content Include="Assets\*.png" />
+    <Content Include="Assets\AppIcon.ico" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
