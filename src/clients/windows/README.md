@@ -10,7 +10,7 @@ Prototype of the **HoloRepository 2027** Windows client: a native WinUI 3 applic
 
 | Area | In the app | Brief |
 |---|---|---|
-| Native Windows client | WinUI 3 (Windows App SDK 1.6), Mica, dark "reading room" and light themes, pop-out viewer windows, full-screen viewports, MSIX packaging | FR-01 |
+| Native Windows client | WinUI 3 (Windows App SDK 1.7), Mica, dark "reading room" and light themes, pop-out viewer windows, full-screen viewports, MSIX packaging | FR-01 |
 | Study ingestion | Opens DICOM from folders (including DICOMDIR layouts), individual files, `.zip` archives, drag and drop, or the command line. See [DICOM support](#dicom-support). Also includes a synthetic chest CT, and NIfTI images can be read and re-oriented | FR-03 |
 | Viewing | Axial / coronal / sagittal MPR with tissue presets, crosshair sync and a 3D view (volume compositing or MIP). Any of the four views can be made full screen | FR-02, FR-04 |
 | Finding organs | *Find organs* sends the scan to the HoloRepository server with the chosen model (`nv-segment-ct`, kidney, liver, head and neck), then shows the returned segmentation as colour on every slice and as 3D surfaces, with per-structure volumes and show/hide. An offline demo is used when not signed in | FR-10 |
@@ -42,7 +42,7 @@ Simulated or not yet implemented: GPU kernels (CUDA, OpenVINO/oneAPI), the Webex
 
 ## HoloRepository server integration
 
-The client talks to the HoloRepository FastAPI server (`src/server` on the `server-init` branch of [HoloRepository/HoloRepository](https://github.com/HoloRepository/HoloRepository/tree/server-init)) using its API contract v0.1.0:
+The client talks to the HoloRepository FastAPI server in [`src/server`](../../server) (developed on the `server-init` branch) using its API contract v0.1.0:
 
 1. **Settings › HoloRepository account**: sign in (`POST /token`) or create an account (`POST /signup`).
 2. **Viewer › Find organs**: the series is zipped as DICOM (the original folder when there is one) and uploaded with the chosen model (`POST /new-job`).
@@ -61,6 +61,8 @@ The server address is under **Settings › Advanced** (default `http://127.0.0.1
 
 ### Build and run
 
+The Windows client lives in `src/clients/windows` of the HoloRepository repository; run these commands from that folder.
+
 ```powershell
 dotnet build HoloRepository.Windows.sln
 dotnet run --project src/HoloRepository.App -p:Platform=x64
@@ -68,7 +70,7 @@ dotnet run --project src/HoloRepository.App -p:Platform=x64
 
 Day-to-day builds run **unpackaged**, so no certificate or Developer Mode is needed. In Visual Studio, pick the `HoloRepository (Unpackaged)` launch profile.
 
-> Keep the clone at a reasonably short path. When the app runs from a very deep folder (for example inside `OneDrive\Documents\...`), the Windows App SDK runtime can crash at startup. The project already keeps its output path short to avoid this.
+> The app uses Windows App SDK 1.7. Version 1.6 could crash at startup when run from a very deep folder (for example inside `OneDrive\Documents\...`).
 
 ### Test
 
@@ -103,7 +105,7 @@ Import-Certificate -FilePath artifacts/signing/HoloRepository-test.cer -CertStor
 Add-AppxPackage artifacts/msix/HoloRepository.App_0.1.0.0_x64.msix
 ```
 
-Every push and pull request runs the GitHub Actions workflow, which tests, enforces coverage and uploads a signed x64 MSIX together with its `.cer` as a build artifact.
+Pushes and pull requests that touch `src/clients/windows/` run the [Windows client workflow](../../../.github/workflows/windows-client.yml), which tests, enforces coverage and uploads a signed x64 MSIX together with its `.cer` as a build artifact.
 
 ## Trying it out
 
