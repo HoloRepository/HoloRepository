@@ -16,8 +16,9 @@ flowchart LR
         Daemon[IComputeDaemonClient]
         Hub[ICollaborationHub]
         NoteGen[INoteGenerator]
+        Seg[ISegmentationService]
         Store[AnnotationStore]
-        Imaging[Imaging<br/>DICOM · MPR · ray caster]
+        Imaging[Imaging<br/>DICOM · NIfTI · MZ3 · MPR · ray caster · mesh renderer]
         Terms[ClinicalTerminology<br/>ReadabilityScorer]
     end
 
@@ -25,6 +26,12 @@ flowchart LR
         InProc[InProcessDaemonClient]
         Loopback[LoopbackCollaborationHub]
         Template[TemplateNoteGenerator]
+        Demo[DemoSegmentationService<br/>offline]
+    end
+
+    subgraph Server["HoloRepository server (FastAPI)"]
+        Remote[RemoteSegmentationService<br/>HoloRepositoryApiClient]
+        Models[nv-segment-ct · kidney · liver · head-n-neck<br/>NIfTI labels + MZ3 meshes]
     end
 
     subgraph Later["Production targets"]
@@ -35,10 +42,12 @@ flowchart LR
 
     Studies & Viewer --> Services
     Consult & Notes --> Services
-    Services --> Daemon & Hub & NoteGen & Store
+    Services --> Daemon & Hub & NoteGen & Store & Seg
     Daemon -.implemented by.-> InProc --> Imaging
     Hub -.implemented by.-> Loopback
     NoteGen -.implemented by.-> Template --> Terms
+    Seg -.signed in.-> Remote --> Models
+    Seg -.offline.-> Demo --> Imaging
     Daemon -.future.-> RealDaemon
     Hub -.future.-> Webex
     NoteGen -.future.-> Granite
@@ -61,6 +70,24 @@ Pages never touch voxel data directly. They ask `IComputeDaemonClient` for slice
 **CPU reference renderer.**
 `VolumeRenderer` is an orthographic ray caster that supports MIP and front-to-back compositing. It is deliberately simple, so it can serve as the reference that GPU backends are tested against. `HardwareProbe` reports which accelerators are present so the daemon can choose a backend (FR-04, FR-08).
 
+**Segmentation comes from the HoloRepository server (FR-10).**
+`ISegmentationService` has two implementations. `RemoteSegmentationService` follows the server's API contract (`HoloRepositoryApiClient`):
+
+1. Zip the series as DICOM.
+2. `POST /new-job` with the chosen `SegmentationModel`.
+3. Poll `GET /job-status`.
+4. Find the new record with `GET /records`.
+5. Download the `nifti_segmented` and `mz3` files.
+
+`DemoSegmentationService` is an offline stand-in that uses CT thresholds. Both return a `SegmentationResult` whose label map is aligned voxel-for-voxel with the open series. The Viewer tints slices with it, and `MeshRenderer` draws its surfaces over the volume render, blending up to four translucent layers per pixel so lungs do not hide what is inside them.
+
+**Everything lines up through patient coordinates.**
+Each `Volume` carries a `PatientFrame` (DICOM LPS origin and axis directions) taken from `ImagePositionPatient` and `ImageOrientationPatient`. NIfTI images (RAS affines) are resampled onto the series through that frame, and `.mz3` meshes from the server (RAS millimetres, as NiiVue expects) are converted with `PatientFrame.RasToLps` and `Volume.FromPatient`. NIfTI volumes opened for viewing are re-ordered into the same LPS axis order as DICOM, so anatomy is the right way up.
+
+**Notes for the server team.**
+- `JobStatus` does not say which record a job produced. The client compares `GET /records` before and after the job, which works for one user at a time. Returning a `record_id` with a finished job would make this exact.
+- The server's mesh merges every label into one surface. When the label map has several structures, the client builds one coloured surface per label from the label map, and uses the server mesh directly only when there is a single structure.
+
 ## Threading
 
 - Daemon calls run on the thread pool. Pages `await` them and update XAML on the UI thread.
@@ -74,5 +101,6 @@ Pages never touch voxel data directly. They ask `IComputeDaemonClient` for slice
 | Remote compute daemon | `IComputeDaemonClient` (e.g. a gRPC client) | `AppServices.Daemon` |
 | Webex consultation | `ICollaborationHub` over the Webex data channel | `AppServices.Hub` |
 | Granite 4.1 / ClinicAVT notes | `INoteGenerator` | `AppServices.NoteGenerator` |
+| Another segmentation backend | `ISegmentationService` | `AppServices.Segmentation` |
 | GPU rendering | A backend inside the daemon, selected via `PreferredBackend` | daemon |
 | New viewer tool | A `Tool` case in `ViewerPage.OnPointer` and an `OverlayKind` | `ViewerPage`, `SliceViewport` |
