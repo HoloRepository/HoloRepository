@@ -73,12 +73,12 @@ public static class DicomSeriesLoader
         var slices = bySeries.Values.OrderByDescending(l => l.Count).First()
             .OrderBy(s => s.Position).ThenBy(s => s.InstanceNumber).ToList();
 
-        var result = BuildVolume(slices, warnings, progress, cancellationToken);
+        var result = BuildVolume(directory, slices, warnings, progress, cancellationToken);
         progress?.Report(1);
         return new DicomLoadResult(result, warnings);
     }
 
-    private static LoadedSeries BuildVolume(List<SliceFile> slices, List<string> warnings, IProgress<double>? progress,
+    private static LoadedSeries BuildVolume(string sourceDirectory, List<SliceFile> slices, List<string> warnings, IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         var first = slices[0].Dataset;
@@ -101,7 +101,10 @@ public static class DicomSeriesLoader
         int depth = multiFrame ? slices[0].Frames : slices.Count;
         double sliceSpacing = EstimateSliceSpacing(slices, first, multiFrame);
 
-        var volume = new Volume(cols, rows, depth, new VoxelSpacing(colSpacing, rowSpacing, sliceSpacing));
+        var volume = new Volume(cols, rows, depth, new VoxelSpacing(colSpacing, rowSpacing, sliceSpacing))
+        {
+            Frame = FrameOf(first),
+        };
         int perSlice = rows * cols;
 
         for (int z = 0; z < depth; z++)
@@ -126,6 +129,7 @@ public static class DicomSeriesLoader
             SeriesInstanceUid = first.GetSingleValueOrDefault(DicomTag.SeriesInstanceUID, string.Empty),
             StudyDate = first.TryGetSingleValue(DicomTag.StudyDate, out DateTime date) ? date : null,
             Source = "DICOM folder",
+            SourcePath = sourceDirectory,
         };
         return new LoadedSeries(metadata, volume);
     }
@@ -176,6 +180,21 @@ public static class DicomSeriesLoader
             result[i] = (short)Math.Clamp(raw * slope + intercept, short.MinValue, short.MaxValue);
         }
         return result;
+    }
+
+    /// <summary>Patient frame from the first (most inferior along the normal) slice's position and orientation.</summary>
+    private static PatientFrame FrameOf(DicomDataset first)
+    {
+        if (!first.TryGetValues<double>(DicomTag.ImagePositionPatient, out var pos) || pos.Length < 3)
+            return PatientFrame.Identity;
+        var origin = new Point3(pos[0], pos[1], pos[2]);
+        if (!first.TryGetValues<double>(DicomTag.ImageOrientationPatient, out var o) || o.Length < 6)
+            return PatientFrame.Identity with { Origin = origin };
+
+        var row = new Point3(o[0], o[1], o[2]);
+        var col = new Point3(o[3], o[4], o[5]);
+        var normal = new Point3(row.Y * col.Z - row.Z * col.Y, row.Z * col.X - row.X * col.Z, row.X * col.Y - row.Y * col.X);
+        return new PatientFrame(origin, row, col, normal);
     }
 
     /// <summary>Distance of the slice along its normal, so slices sort correctly for any acquisition plane.</summary>

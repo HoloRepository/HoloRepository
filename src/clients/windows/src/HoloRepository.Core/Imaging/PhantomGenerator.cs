@@ -31,11 +31,11 @@ public static class PhantomGenerator
             PatientId = "SYNTH-0001",
             Modality = "CT",
             StudyDescription = "CT Thorax with contrast (synthetic)",
-            SeriesDescription = "Synthetic chest phantom",
+            SeriesDescription = "Sample chest CT",
             StudyInstanceUid = "2.25.100000000000000000000000000000001",
             SeriesInstanceUid = "2.25.100000000000000000000000000000002",
             StudyDate = new DateTime(2026, 11, 1),
-            Source = "Built-in phantom",
+            Source = "Built-in sample (not a real patient)",
             IsSynthetic = true,
         };
         return new LoadedSeries(metadata, volume);
