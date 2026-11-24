@@ -1,0 +1,56 @@
+name: Windows client
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/clients/windows/**"
+      - ".github/workflows/windows-client.yml"
+  pull_request:
+    paths:
+      - "src/clients/windows/**"
+      - ".github/workflows/windows-client.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: src/clients/windows
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test core library
+        run: dotnet test tests/HoloRepository.Core.Tests -c Release --collect:"XPlat Code Coverage" --results-directory coverage
+
+      - name: Enforce 80% line coverage
+        shell: pwsh
+        run: |
+          $report = Get-ChildItem coverage -Recurse -Filter coverage.cobertura.xml | Select-Object -First 1
+          [xml] $xml = Get-Content $report.FullName
+          $rate = [double] $xml.coverage.'line-rate' * 100
+          "Core line coverage: {0:N1}%" -f $rate | Tee-Object -Append -FilePath $env:GITHUB_STEP_SUMMARY
+          if ($rate -lt 80) { throw "Line coverage is below the 80% target." }
+
+      - name: Create test signing certificate
+        shell: pwsh
+        run: ./scripts/New-TestSigningCertificate.ps1 -OutDir artifacts/signing -Password "${{ github.run_id }}"
+
+      - name: Build and sign MSIX (x64)
+        shell: pwsh
+        run: ./scripts/Build-Msix.ps1 -Platform x64 -CertificatePath artifacts/signing/HoloRepository-test.pfx -CertificatePassword "${{ github.run_id }}"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: HoloRepository-Windows-msix-x64
+          path: |
+            src/clients/windows/artifacts/msix/*.msix
+            src/clients/windows/artifacts/signing/HoloRepository-test.cer
+          if-no-files-found: error

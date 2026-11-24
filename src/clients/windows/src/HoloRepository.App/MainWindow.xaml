@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="HoloRepository.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="HoloRepository">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="16,0,140,0">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Image Source="ms-appx:///Assets/Square44x44Logo.png" Width="18" Height="18" />
+                <TextBlock Text="HoloRepository" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="Windows · research prototype" Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="6">
+                <Ellipse Width="8" Height="8" Fill="{ThemeResource HoloSuccessBrush}" />
+                <TextBlock x:Name="DaemonBadge" Text="Local daemon online · no cloud egress" Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Grid>
+
+        <NavigationView
+            x:Name="Nav"
+            Grid.Row="1"
+            PaneDisplayMode="Left"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="True"
+            OpenPaneLength="220"
+            SelectionChanged="Nav_SelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Studies" Tag="studies">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Library" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Viewer" Tag="viewer">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="View" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Consultation" Tag="consultation">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Video" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Clinical notes" Tag="notes">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Document" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
+    </Grid>
+</Window>
