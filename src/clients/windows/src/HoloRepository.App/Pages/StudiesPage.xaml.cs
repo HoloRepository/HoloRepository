@@ -22,8 +22,19 @@ public sealed partial class StudiesPage : Page
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        ApplyTechnicalDetails();
         RefreshList();
         await RefreshStatusAsync();
+    }
+
+    /// <summary>Engineering details (compute daemon, DICOM export) are hidden unless enabled in Settings.</summary>
+    private void ApplyTechnicalDetails()
+    {
+        bool technical = _services.ShowTechnicalDetails;
+        DaemonCard.Visibility = technical ? Visibility.Visible : Visibility.Collapsed;
+        DaemonColumn.Width = technical ? new GridLength(360) : new GridLength(0);
+        ContentGrid.ColumnSpacing = technical ? 16 : 0;
+        ExportButton.Visibility = technical ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void RefreshList()
@@ -46,11 +57,11 @@ public sealed partial class StudiesPage : Page
 
     private async void LoadSample_Click(object sender, RoutedEventArgs e)
     {
-        await RunBusyAsync("Generating synthetic chest CT…", async () =>
+        await RunBusyAsync("Opening the sample chest CT…", async () =>
         {
             var info = await _services.Daemon.LoadSampleAsync();
             Select(info);
-            ShowStatus(InfoBarSeverity.Success, "Sample loaded", $"{info.Metadata.SeriesDescription} ({info.Dimensions}). No real patient data is used.");
+            ShowStatus(InfoBarSeverity.Success, "Sample opened", "This is a computer-generated chest CT, not a real patient.");
         });
     }
 
@@ -61,14 +72,16 @@ public sealed partial class StudiesPage : Page
         var folder = await picker.PickSingleFolderAsync();
         if (folder is null) return;
 
-        await RunBusyAsync($"Reading DICOM files from {folder.Name}…", async () =>
+        await RunBusyAsync($"Reading the scan in {folder.Name}…", async () =>
         {
             var progress = new Progress<double>(p => Progress.Value = p);
             var info = await _services.Daemon.LoadDicomDirectoryAsync(folder.Path, progress);
             Select(info);
             string warnings = info.Warnings.Count > 0 ? " " + string.Join(" ", info.Warnings) : string.Empty;
-            ShowStatus(info.Warnings.Count > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success,
-                "Series loaded", $"{info.Metadata.SeriesDescription} · {info.Dimensions} · {info.SpacingText}.{warnings}");
+            string detail = _services.ShowTechnicalDetails
+                ? $"{info.Metadata.SeriesDescription} · {info.Dimensions} · {info.SpacingText}."
+                : $"{info.Metadata.PatientDisplayName} · {info.Metadata.SeriesDescription} · {info.Depth} images.";
+            ShowStatus(info.Warnings.Count > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success, "Scan opened", detail + warnings);
         });
     }
 

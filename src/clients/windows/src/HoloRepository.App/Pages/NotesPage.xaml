@@ -107,7 +107,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <TextBlock Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                           Text="Concept table is an offline subset for the prototype; verify codes in the NHS SNOMED CT browser. Live NICE verification runs in the clinical agent hub." />
+                                           Text="Codes are suggestions from a limited offline list. Check them in the NHS SNOMED CT browser before use." />
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
@@ -129,7 +129,7 @@
                     <TextBlock x:Name="PatientText" TextWrapping="Wrap" FontSize="18" LineHeight="28" IsTextSelectionEnabled="True"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="A short, friendly explanation for the patient will appear here." />
-                    <TextBlock x:Name="ReadabilityDetail" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock x:Name="ReadabilityDetail" Visibility="Collapsed" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock Text="Language" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <ComboBox SelectedIndex="0" IsEnabled="False" MinWidth="160" ToolTipService.ToolTip="Translations are planned (FR-14)">

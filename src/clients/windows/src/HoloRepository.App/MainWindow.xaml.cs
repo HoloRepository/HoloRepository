@@ -26,11 +26,9 @@ public sealed partial class MainWindow : Window
         WindowHelper.SizeAndCentre(this, 1480, 940);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
 
-        string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.png");
-        if (File.Exists(icon))
-        {
-            try { AppWindow.SetIcon(icon); } catch (ArgumentException) { }
-        }
+        var services = AppServices.Current;
+        DaemonBadgePanel.Visibility = services.TechnicalVisibility;
+        services.TechnicalDetailsChanged += (_, _) => DispatcherQueue.TryEnqueue(() => DaemonBadgePanel.Visibility = services.TechnicalVisibility);
 
         Navigate("studies");
     }
@@ -44,6 +42,14 @@ public sealed partial class MainWindow : Window
             return;
         }
         Nav.SelectedItem = Nav.MenuItems.OfType<NavigationViewItem>().First(i => (string)i.Tag == tag);
+    }
+
+    /// <summary>Hides the title bar and navigation so a viewport can fill the screen.</summary>
+    public void SetImmersive(bool immersive)
+    {
+        AppTitleBar.Visibility = immersive ? Visibility.Collapsed : Visibility.Visible;
+        RootGrid.RowDefinitions[0].Height = immersive ? new GridLength(0) : new GridLength(40);
+        Nav.IsPaneVisible = !immersive;
     }
 
     private void Nav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)

@@ -9,9 +9,28 @@
             <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
 
             <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="HoloRepository account" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="Sign in to use your hospital's HoloRepository server for finding organs. Without signing in, an offline demo is used." />
+                    <InfoBar x:Name="AccountStatus" IsOpen="True" IsClosable="False" />
+                    <StackPanel x:Name="SignInPanel" Spacing="10">
+                        <TextBox x:Name="UsernameBox" Header="Username" MinWidth="320" MaxWidth="420" HorizontalAlignment="Left" />
+                        <PasswordBox x:Name="PasswordBox" Header="Password" MinWidth="320" MaxWidth="420" HorizontalAlignment="Left" KeyDown="PasswordBox_KeyDown" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="SignInButton" Content="Sign in" Style="{StaticResource AccentButtonStyle}" Click="SignIn_Click" />
+                            <Button x:Name="CreateAccountButton" Content="Create account" Click="CreateAccount_Click" />
+                            <ProgressRing x:Name="AccountProgress" IsActive="False" Width="20" Height="20" />
+                        </StackPanel>
+                    </StackPanel>
+                    <Button x:Name="SignOutButton" Content="Sign out" Click="SignOut_Click" Visibility="Collapsed" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Appearance" Style="{StaticResource SectionHeaderStyle}" />
-                    <RadioButtons x:Name="ThemeButtons" Header="Clinical theme" SelectionChanged="Theme_SelectionChanged">
+                    <RadioButtons x:Name="ThemeButtons" Header="Theme" SelectionChanged="Theme_SelectionChanged">
                         <x:String>Dark (reading room)</x:String>
                         <x:String>Light</x:String>
                         <x:String>Use Windows setting</x:String>
@@ -20,22 +39,29 @@
             </Border>
 
             <Border Style="{StaticResource CardStyle}">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Compute daemon" Style="{StaticResource SectionHeaderStyle}" />
-                    <ComboBox x:Name="BackendBox" Header="Preferred acceleration backend" MinWidth="260" SelectionChanged="Backend_SelectionChanged" />
-                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
-                               Text="The prototype always renders on the CPU. The preference is passed to the daemon so a GPU/NPU backend can be selected once implemented." />
-                    <TextBox x:Name="EndpointBox" Header="Remote daemon endpoint (gRPC / REST)" PlaceholderText="http://localhost:50051" MaxWidth="420"
-                             HorizontalAlignment="Left" MinWidth="320" LostFocus="Endpoint_LostFocus" />
-                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
-                               Text="Not used by the in-process daemon. Reserved for the standalone on-premise service." />
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Consultation" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBox x:Name="DisplayNameBox" Header="Your name, as colleagues see it" MinWidth="320" HorizontalAlignment="Left" LostFocus="DisplayName_LostFocus" />
                 </StackPanel>
             </Border>
 
             <Border Style="{StaticResource CardStyle}">
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Consultation" Style="{StaticResource SectionHeaderStyle}" />
-                    <TextBox x:Name="DisplayNameBox" Header="Display name shown to MDT colleagues" MinWidth="320" HorizontalAlignment="Left" LostFocus="DisplayName_LostFocus" />
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Advanced" Style="{StaticResource SectionHeaderStyle}" />
+                    <ToggleSwitch x:Name="TechnicalToggle" Header="Show technical details" OffContent="Off (recommended for clinical use)" OnContent="On"
+                                  Toggled="TechnicalToggle_Toggled" />
+                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                               Text="For developers and IT staff. Shows connection settings, compute status, simulation controls and diagnostic readouts." />
+
+                    <StackPanel x:Name="TechnicalPanel" Spacing="12" Visibility="Collapsed">
+                        <TextBox x:Name="ServerBox" Header="HoloRepository server address" PlaceholderText="http://127.0.0.1:8000/" MinWidth="320" MaxWidth="420"
+                                 HorizontalAlignment="Left" LostFocus="Server_LostFocus" />
+                        <ComboBox x:Name="BackendBox" Header="Preferred acceleration backend" MinWidth="260" SelectionChanged="Backend_SelectionChanged" />
+                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                                   Text="The prototype always renders on the CPU. The preference is passed to the daemon so a GPU/NPU backend can be selected once implemented." />
+                        <TextBox x:Name="EndpointBox" Header="Remote compute daemon endpoint (gRPC / REST)" PlaceholderText="http://localhost:50051" MaxWidth="420"
+                                 HorizontalAlignment="Left" MinWidth="320" LostFocus="Endpoint_LostFocus" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -44,7 +70,7 @@
                     <TextBlock Text="About" Style="{StaticResource SectionHeaderStyle}" />
                     <TextBlock x:Name="VersionText" />
                     <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="Investigational research prototype. Not a medical device and not for diagnostic use. All imaging and transcript processing runs on this machine." />
+                               Text="Research prototype. Not a medical device and not for diagnostic use. Scans are processed on this computer unless you choose to use the HoloRepository server." />
                     <HyperlinkButton Content="github.com/HoloRepository/Windows" NavigateUri="https://github.com/HoloRepository/Windows" Padding="0" />
                 </StackPanel>
             </Border>
