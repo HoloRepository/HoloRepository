@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>HoloRepository.Core</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="fo-dicom" Version="5.1.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="HoloRepository.Core.Tests" />
+  </ItemGroup>
+</Project>
