@@ -7,8 +7,8 @@
     <AssemblyName>HoloRepository</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <!-- Keep the output path short: the Windows App SDK runtime can crash at startup when the app runs from a very
-         deep folder (e.g. a repository inside OneDrive\Documents\...). -->
+    <!-- Short output path (bin\x64\Debug). Windows App SDK 1.6 could crash at startup from very deep folders;
+         1.7 fixes that, and a shorter path still keeps well clear of MAX_PATH. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <Platforms>x64;ARM64</Platforms>
@@ -43,7 +43,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.260224002" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
   </ItemGroup>
 
