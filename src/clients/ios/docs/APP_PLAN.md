@@ -38,7 +38,7 @@
 
 ### Text
 - **Doctor app:** SF Pro (system font), Dynamic Type text styles, regular and semibold only.
-- **Patient app:** SF Pro Rounded, one text size larger, plain language.
+- **Patient app:** SF Pro Rounded at the phone's normal text size, plain language.
 - Numbers (volumes, dates) use monospaced digits.
 
 ### Components and layout
@@ -153,15 +153,19 @@ Meetings don't get their own tab. They appear in:
 
 ## 3. Patient app
 
-**Bottom navigation:** Home · My Scans · My Reports · Appointments
+**Bottom navigation:** Home · Reports · Scans · Messages · Profile
+
+Appointments has no tab: it opens from Home (Quick access and the Upcoming appointment card) and from search. Messages, Family Access, AI Assistant and patient notifications open a shared "Coming soon" screen until they're built.
 
 > Patients only see scans, annotations and reports that have been authorised for patient access.
 
 ### 3.1 Home
-- Welcome greeting
-- Next appointment
-- Recent activity
-- Notifications
+In this order, in one scrolling page:
+1. Header: app name, notification bell, initials avatar (opens Profile); greeting by time of day ("Good morning, Alex") and "What would you like to find today?"
+2. Search bar: searches the patient's own approved reports, scans and appointments, grouped by type (messages and medical history later)
+3. Quick access (3 × 2 icons, no cards): Reports, Scans, Appointments / Messages, Family Access, AI Assistant
+4. Your latest results: the newest scan with an approved report, "Ready" badge, easy-read explanation, "Understand my results"
+5. Upcoming appointment: date block, clinician, time and department
 
 ### 3.2 My Scans
 1. Scans library (CT scans; each one has a 3D model)

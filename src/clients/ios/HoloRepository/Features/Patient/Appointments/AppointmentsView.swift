@@ -10,19 +10,19 @@ import SwiftUI
 /// Placeholder for upcoming and previous appointments.
 struct AppointmentsView: View {
     var body: some View {
-        NavigationStack {
-            ContentUnavailableView {
-                Label("Appointments", systemImage: "calendar")
-            } description: {
-                Text("Your upcoming and past appointments will show here.")
-            }
-            .navigationTitle("Appointments")
+        // Pushed from Home and search (no longer a tab), so it has no NavigationStack of its own.
+        ContentUnavailableView {
+            Label("Appointments", systemImage: "calendar")
+        } description: {
+            Text("Your upcoming and past appointments will show here.")
         }
+        .navigationTitle("Appointments")
     }
 }
 
 #Preview {
-    AppointmentsView()
-        .tint(Theme.patientAccent)
-        .fontDesign(.rounded)
+    NavigationStack {
+        AppointmentsView()
+    }
+    .patientStyle()
 }

@@ -7,25 +7,45 @@
 
 import SwiftUI
 
-/// Bottom tabs for the patient app. Teal tint, rounded text, one text size larger.
+/// The patient tabs, in order. Appointments is reached from Home (Quick access, the appointment card, search).
+enum PatientTab: Hashable {
+    case home, reports, scans, messages, profile
+}
+
+/// Bottom tabs for the patient app. Teal tint, rounded text.
 struct PatientTabView: View {
     @Environment(AppState.self) private var appState
-    /// The patient's own approved content, shared by Home and My Scans.
+    @State private var selection: PatientTab
+    /// The patient's own approved content, shared by every tab.
     @State private var contentModel = PatientContentModel()
 
-    var body: some View {
-        TabView {
-            PatientHomeView(model: contentModel)
-                .tabItem { Label("Home", systemImage: "house") }
+    init(selection: PatientTab = .home) {
+        _selection = State(initialValue: selection)
+    }
 
-            MyScansView(model: contentModel)
-                .tabItem { Label("My Scans", systemImage: "cube") }
+    var body: some View {
+        TabView(selection: $selection) {
+            PatientHomeView(model: contentModel, onSelectTab: { selection = $0 })
+                .tabItem { Label("Home", systemImage: "house") }
+                .tag(PatientTab.home)
 
             MyReportsView()
-                .tabItem { Label("My Reports", systemImage: "doc.text") }
+                .tabItem { Label("Reports", systemImage: "doc.text") }
+                .tag(PatientTab.reports)
 
-            AppointmentsView()
-                .tabItem { Label("Appointments", systemImage: "calendar") }
+            MyScansView(model: contentModel)
+                .tabItem { Label("Scans", systemImage: "cube") }
+                .tag(PatientTab.scans)
+
+            NavigationStack {
+                ComingSoonView(feature: .messages)
+            }
+            .tabItem { Label("Messages", systemImage: "message") }
+            .tag(PatientTab.messages)
+
+            PatientProfileView()
+                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+                .tag(PatientTab.profile)
         }
         .patientStyle()
         .onAppear {

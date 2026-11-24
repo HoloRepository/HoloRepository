@@ -18,6 +18,15 @@ struct PatientScan: Identifiable, Hashable {
     var id: String { study.id }
 }
 
+/// Patient search results, grouped by type.
+struct PatientSearchResults {
+    let reports: [Report]
+    let scans: [PatientScan]
+    let appointments: [Appointment]
+
+    var isEmpty: Bool { reports.isEmpty && scans.isEmpty && appointments.isEmpty }
+}
+
 /// One line in the patient's recent activity, already in plain words.
 struct PatientActivity: Identifiable, Hashable {
     let id: String
@@ -37,6 +46,8 @@ final class PatientContentModel {
     private(set) var scans: [PatientScan] = []
     /// Reports approved for the patient, newest approval first.
     private(set) var approvedReports: [Report] = []
+    /// All of the patient's appointments, newest first (for search and detail).
+    private(set) var appointments: [Appointment] = []
     /// Future appointments, soonest first.
     private(set) var upcomingAppointments: [Appointment] = []
     /// Newest first.
@@ -75,8 +86,11 @@ final class PatientContentModel {
                 return PatientScan(study: study, studyModel: model, report: report)
             }
 
-        upcomingAppointments = service.appointments
-            .filter { $0.patientId == patientId && $0.date > now }
+        appointments = service.appointments
+            .filter { $0.patientId == patientId }
+            .sorted { $0.date > $1.date }
+        upcomingAppointments = appointments
+            .filter { $0.date > now }
             .sorted { $0.date < $1.date }
 
         activity = service.activityItems
@@ -94,7 +108,33 @@ final class PatientContentModel {
     }
 
     func appointment(id: String) -> Appointment? {
-        upcomingAppointments.first { $0.id == id }
+        appointments.first { $0.id == id }
+    }
+
+    /// Searches only this patient's approved reports, scans and appointments.
+    /// An empty query returns everything, grouped.
+    // Later: messages and medical history can be added as more result groups.
+    func search(_ query: String) -> PatientSearchResults {
+        let words = query.lowercased().split(separator: " ").map(String.init)
+        func matches(_ fields: [String?]) -> Bool {
+            let text = fields.compactMap { $0 }.joined(separator: " ").lowercased()
+            return words.allSatisfy { text.contains($0) }
+        }
+        return PatientSearchResults(
+            reports: approvedReports.filter { report in
+                let scan = scan(studyId: report.studyId)
+                return matches(["report", "results", report.title, report.approvedBy,
+                                scan?.study.patientName, scan?.study.bodyPart])
+            },
+            scans: scans.filter { scan in
+                matches(["scan", scan.study.patientName, scan.study.patientDescription,
+                         scan.study.description, scan.study.bodyPart, scan.study.modality.displayName,
+                         scan.study.date.formatted(.dateTime.day().month(.wide).year())])
+            },
+            appointments: appointments.filter { appointment in
+                matches(["appointment", appointment.clinicianName, appointment.department,
+                         appointment.date.formatted(.dateTime.day().month(.wide).year())])
+            })
     }
 
     // MARK: Private
@@ -124,6 +164,7 @@ final class PatientContentModel {
         patient = nil
         scans = []
         approvedReports = []
+        appointments = []
         upcomingAppointments = []
         activity = []
     }
@@ -137,6 +178,15 @@ extension PatientContentModel {
         let model = PatientContentModel()
         let service = MockDataService()
         model.load(from: service, user: service.patientUser)
+        return model
+    }
+
+    /// The demo patient, seen a year from now: every appointment is in the past.
+    static func noUpcomingAppointment() -> PatientContentModel {
+        let model = PatientContentModel()
+        let service = MockDataService()
+        model.load(from: service, user: service.patientUser,
+                   now: Calendar.current.date(byAdding: .year, value: 1, to: .now) ?? .distantFuture)
         return model
     }
 

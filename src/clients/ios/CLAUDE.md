@@ -31,7 +31,7 @@ HoloRepository/
 ├── Features/
 │   ├── Auth/       role choice, sign-in, invitation, activation
 │   ├── Doctor/     DoctorTabView + Home/, Patients/, Imaging/, Reports/, Profile/
-│   └── Patient/    PatientTabView + Home/, MyScans/, MyReports/, Appointments/, Profile/
+│   └── Patient/    PatientTabView + Home/, MyScans/, MyReports/, Appointments/, Profile/, Search/, ComingSoon/
 ├── Components/     shared UI: Card, StatusBadge, PatientBanner, EmptyState
 └── Resources/      Assets.xcassets, MockData/ (JSON), Viewer/ (holo_viewer.html)
 ```
@@ -42,8 +42,10 @@ HoloRepository/
 ## Roles and navigation
 - Sign-in → role check → doctor or patient tabs (RootView decides).
 - **Doctor tabs:** Home · Patients · Imaging · Reports. Meetings live in Home (upcoming and active MDT sessions) and in a patient's consultation history, not in their own tab.
-- **Patient tabs:** Home · My Scans · My Reports · Appointments.
-- Profile/settings open from the avatar on each Home.
+- **Patient tabs:** Home · Reports · Scans · Messages · Profile. Appointments has no tab: it opens from Home (Quick access, the Upcoming appointment card) and from search.
+- Patient Home order: header (bell, avatar), greeting, search bar, Quick access (Reports, Scans, Appointments / Messages, Family Access, AI Assistant), Your latest results, Upcoming appointment.
+- Features not built yet (Messages, Family Access, AI Assistant, patient notifications) open the shared `ComingSoonView`.
+- Profile/settings open from the avatar on each Home (on the patient app, the avatar switches to the Profile tab).
 - Patients only ever see content marked as approved / authorised for patient access. Doctors see AI drafts and approved content.
 - Patient identity is linked to a verified clinical record, not just an email.
 
@@ -66,7 +68,7 @@ The 3D model is the team's shared web viewer inside a `WKWebView`. Never rebuild
   - `Theme.lesion` is reserved for lesions in the 3D view. Never use it in UI.
   - The 3D viewer background is always dark (`Theme.viewerBackground`).
 - Follow the phone's light/dark setting.
-- Text: Dynamic Type text styles only (`.largeTitle`, `.headline`, `.body`, `.subheadline`, `.caption`), regular and semibold. Patient app uses `.fontDesign(.rounded)` and one size larger. Numbers use `.monospacedDigit()`.
+- Text: Dynamic Type text styles only (`.largeTitle`, `.headline`, `.body`, `.subheadline`, `.caption`), regular and semibold. Patient app uses `.fontDesign(.rounded)` at the phone's normal text size (no extra size boost). Numbers use `.monospacedDigit()`.
 - Components: `TabView` with icons and labels; `List(.insetGrouped)`; cards via `.cardStyle()`; one `.borderedProminent` button per screen; `.searchable`; `ContentUnavailableView` for empty states; SF Symbols for icons.
 - Doctor Home uses summary cards (count + 2–3 items each).
 - Spacing in steps of 8 (`Theme.Spacing`); radius 12 for buttons, 16 for cards; tap targets at least 44 pt.

@@ -11,6 +11,7 @@ import SwiftUI
 struct PatientProfileView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isPresented) private var isPresented
 
     var body: some View {
         NavigationStack {
@@ -30,8 +31,11 @@ struct PatientProfileView: View {
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                // Only when shown as a sheet; as the Profile tab there's nothing to dismiss.
+                if isPresented {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
                 }
             }
         }

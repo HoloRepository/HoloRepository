@@ -7,14 +7,10 @@
 
 import SwiftUI
 
-/// The patient app's look: teal tint, rounded text, and every text style one Dynamic Type size larger
-/// than the phone's setting (still following the user's choice, and capped at the largest size).
+/// The patient app's look: teal tint and rounded text, at the phone's own Dynamic Type size.
 private struct PatientStyle: ViewModifier {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     func body(content: Content) -> some View {
         content
-            .environment(\.dynamicTypeSize, dynamicTypeSize.oneSizeLarger)
             .tint(Theme.patientAccent)
             .fontDesign(.rounded)
     }
@@ -25,20 +21,15 @@ extension View {
     func patientStyle() -> some View { modifier(PatientStyle()) }
 }
 
-private extension DynamicTypeSize {
-    var oneSizeLarger: DynamicTypeSize {
-        let sizes = DynamicTypeSize.allCases
-        guard let index = sizes.firstIndex(of: self) else { return self }
-        return sizes[min(index + 1, sizes.count - 1)]
-    }
-}
-
 /// Places a patient screen can push to. Home and My Scans share them.
 enum PatientRoute: Hashable {
     case scan(studyId: String)
     case viewer(studyId: String)
     case report(reportId: String)
     case appointment(appointmentId: String)
+    case appointments
+    case search
+    case comingSoon(ComingSoonFeature)
 }
 
 extension View {
@@ -54,6 +45,12 @@ extension View {
                 PatientReportPlaceholderView(report: model.report(id: reportId))
             case .appointment(let appointmentId):
                 AppointmentPlaceholderView(appointment: model.appointment(id: appointmentId))
+            case .appointments:
+                AppointmentsView()
+            case .search:
+                PatientSearchView(model: model)
+            case .comingSoon(let feature):
+                ComingSoonView(feature: feature)
             }
         }
     }

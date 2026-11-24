@@ -148,9 +148,9 @@ struct ReportDetailView: View {
                 Label("What the patient will see", systemImage: "person")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
-                // Same style as the patient app: rounded, one size larger.
+                // Same style as the patient app: rounded body text.
                 Text(report.patientSummary)
-                    .font(.title3)
+                    .font(.body)
                     .fontDesign(.rounded)
             }
             .cardStyle()
