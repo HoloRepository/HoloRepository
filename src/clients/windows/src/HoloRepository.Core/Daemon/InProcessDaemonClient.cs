@@ -56,6 +56,17 @@ public sealed class InProcessDaemonClient : IComputeDaemonClient
         return Register(result.Series, result.Warnings);
     }
 
+    public Task<DicomScanResult> ScanDicomAsync(IEnumerable<string> paths, IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default) =>
+        DicomSeriesLoader.ScanAsync(paths, progress, cancellationToken);
+
+    public async Task<SeriesInfo> LoadDicomSeriesAsync(DicomScanResult scan, string seriesInstanceUid, IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await DicomSeriesLoader.LoadAsync(scan, seriesInstanceUid, progress, cancellationToken).ConfigureAwait(false);
+        return Register(result.Series, result.Warnings);
+    }
+
     public Task ExportSeriesAsDicomAsync(string seriesId, string directory, CancellationToken cancellationToken = default) =>
         DicomSeriesWriter.WriteAsync(Get(seriesId), directory, cancellationToken);
 

@@ -73,7 +73,12 @@ public class InProcessDaemonTests
         var loaded = await daemon.LoadDicomDirectoryAsync(dir.Path);
         Assert.Equal(sample.Depth, loaded.Depth);
         Assert.Equal(2, daemon.LoadedSeries.Count);
-        Assert.Equal("DICOM folder", loaded.Metadata.Source);
+        Assert.Equal("DICOM", loaded.Metadata.Source);
+
+        var scan = await daemon.ScanDicomAsync([dir.Path]);
+        var again = await daemon.LoadDicomSeriesAsync(scan, scan.Largest!.SeriesInstanceUid);
+        Assert.Equal(sample.Depth, again.Depth);
+        Assert.Equal(3, daemon.LoadedSeries.Count);
     }
 
     [Fact]
