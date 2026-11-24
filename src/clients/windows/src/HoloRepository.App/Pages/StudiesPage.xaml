@@ -5,9 +5,19 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:daemon="using:HoloRepository.Core.Daemon"
     xmlns:local="using:HoloRepository.App.Pages"
+    xmlns:imaging="using:HoloRepository.Core.Imaging"
     NavigationCacheMode="Required">
 
-    <Grid Padding="28,20,28,20" RowSpacing="16">
+    <Page.Resources>
+        <DataTemplate x:Key="SeriesChoiceTemplate" x:DataType="imaging:DicomSeriesSummary">
+            <StackPanel Padding="0,6" Opacity="{x:Bind local:StudiesPage.OpacityFor(IsSupported)}">
+                <TextBlock Text="{x:Bind Title}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="{x:Bind Detail}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid Padding="28,20,28,20" RowSpacing="16" AllowDrop="True" DragOver="Page_DragOver" Drop="Page_Drop" Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -16,7 +26,7 @@
 
         <StackPanel>
             <TextBlock Text="Studies" Style="{StaticResource PageTitleStyle}" />
-            <TextBlock Text="Open a patient's scan, or try the sample chest CT. Scans are processed on this computer."
+            <TextBlock Text="Open a patient's DICOM scan (a folder, files or a .zip), or drag it here. Scans are processed on this computer."
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
@@ -32,6 +42,12 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <SymbolIcon Symbol="OpenLocal" />
                         <TextBlock Text="Open scan folder…" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="OpenFilesButton" Click="OpenFiles_Click" ToolTipService.ToolTip="DICOM files (.dcm) or a .zip archive">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <SymbolIcon Symbol="OpenFile" />
+                        <TextBlock Text="Open DICOM files…" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="ExportButton" Click="Export_Click" IsEnabled="False">
@@ -89,7 +105,7 @@
                         <FontIcon Glyph="&#xE8B7;" FontSize="40" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                         <TextBlock Text="No scans open" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
                         <TextBlock TextAlignment="Center" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   Text="Open a folder containing a patient's DICOM scan, or try the built-in sample chest CT (not a real patient)." />
+                                   Text="Open a folder, DICOM files or a .zip of a patient's scan, or drag them onto this page. You can also try the built-in sample chest CT (not a real patient)." />
                     </StackPanel>
                     <Button x:Name="OpenViewerButton" Content="Open in viewer" Style="{StaticResource AccentButtonStyle}"
                             HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8" IsEnabled="False" Click="OpenViewer_Click" />
