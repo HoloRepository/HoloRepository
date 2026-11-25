@@ -2,11 +2,11 @@
 
 # HoloRepository for macOS
 
-The macOS app for HoloRepository 2027. It opens CT and MR scans saved as NIfTI and shows them as 2D slices and a 3D view side by side.
+The macOS app for HoloRepository 2027. It opens CT and MR scans (DICOM or NIfTI) and shows them as 2D slices and a 3D view side by side.
 
 ## Features
 
-- Open NIfTI files (`.nii`, `.nii.gz`).
+- Open DICOM files, NIfTI files (`.nii`, `.nii.gz`) or a whole folder.
 - See axial, coronal and sagittal slices and a 3D view together.
 
 ## Run it
@@ -16,7 +16,8 @@ The macOS app for HoloRepository 2027. It opens CT and MR scans saved as NIfTI a
 
 ## How to use it
 
-- **Open a scan:** click **Open…** (⌘O) and choose a NIfTI file.
+- **Open a scan:** click **Open…** or drag files onto the window. If a folder has several scans, pick one from the list.
+- **Close a scan:** select it in the sidebar and click **Close**. Opened scans are forgotten when you quit.
 
 ## App icon
 
@@ -36,7 +37,6 @@ Scans are always read from where they already are, such as a hospital drive or a
 
 ## Coming next
 
-- Open DICOM files and folders.
 - Viewing tools: layouts, contrast presets, measuring and 3D options.
 - Sign in to the HoloRepository server.
 - Send scans to the server for segmentation, then show the organs it finds in 2D and 3D.

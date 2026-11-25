@@ -5,6 +5,7 @@
 // `window.holo` API below and listens for events posted with `native(...)`.
 
 import { Niivue, SLICE_TYPE, SHOW_RENDER } from './vendor/niivue/niivue.js'
+import { Dcm2niix } from './vendor/dcm2niix/index.jpeg.js'
 
 // ---- Native bridge -------------------------------------------------------
 // macOS: window.webkit.messageHandlers.holo   Windows (WebView2): window.chrome.webview
@@ -35,10 +36,46 @@ nv.onLocationChange = (data) => {
 
 // ---- Loading scans -------------------------------------------------------
 
+let converter = null
+async function getConverter() {
+  if (!converter) {
+    converter = new Dcm2niix()
+    await converter.init()
+  }
+  return converter
+}
+
 async function fetchBuffer(url) {
   const response = await fetch(url)
   if (!response.ok) throw new Error(`Could not read file (HTTP ${response.status})`)
   return await response.arrayBuffer()
+}
+
+async function fetchAll(urls, names, concurrency = 8) {
+  const files = new Array(urls.length)
+  let next = 0, done = 0
+  async function work() {
+    while (next < urls.length) {
+      const i = next++
+      files[i] = new File([await fetchBuffer(urls[i])], names[i] || `${i}.dcm`)
+      if (++done % 25 === 0 || done === urls.length)
+        native({ type: 'progress', message: `Reading DICOM files… ${done}/${urls.length}` })
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, work))
+  return files
+}
+
+/** DICOM files → one NIfTI volume using dcm2niix (WebAssembly). */
+async function dicomToNifti(urls, names) {
+  const files = await fetchAll(urls, names)
+  native({ type: 'progress', message: 'Reconstructing 3D volume…' })
+  const dcm2niix = await getConverter()
+  const outputs = await dcm2niix.input(files).bids('n').z('n').run()
+  const volumes = outputs.filter((f) => /\.nii(\.gz)?$/i.test(f.name))
+  if (volumes.length === 0) throw new Error('dcm2niix could not build a volume from these DICOM files.')
+  volumes.sort((a, b) => b.size - a.size) // if a series splits, show the largest part
+  return { buffer: await volumes[0].arrayBuffer(), fileName: volumes[0].name }
 }
 
 function clearAll() {
@@ -49,9 +86,14 @@ async function loadScan(name, format, urls, names) {
   try {
     const started = performance.now()
     clearAll()
-    native({ type: 'progress', message: 'Reading NIfTI file…' })
-    const buffer = await fetchBuffer(urls[0])
-    const fileName = names[0]
+    let buffer, fileName
+    if (format === 'dicom') {
+      ({ buffer, fileName } = await dicomToNifti(urls, names))
+    } else {
+      native({ type: 'progress', message: 'Reading NIfTI file…' })
+      buffer = await fetchBuffer(urls[0])
+      fileName = names[0]
+    }
 
     native({ type: 'progress', message: 'Uploading to GPU…' })
     await nv.loadFromArrayBuffer(buffer, fileName)

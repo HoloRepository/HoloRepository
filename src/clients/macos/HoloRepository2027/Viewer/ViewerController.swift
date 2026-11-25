@@ -46,7 +46,7 @@ final class ViewerController {
             return
         }
         loadedScan = scan
-        status = .loading("Reading NIfTI file…")
+        status = .loading(scan.format == .dicom ? "Reading \(scan.imageFiles.count) DICOM files…" : "Reading NIfTI file…")
         volumeInfo = ""
         let urls = fileServer.publish(scan.imageFiles).map(\.absoluteString)
         let names = scan.imageFiles.map(\.lastPathComponent)
