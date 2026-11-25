@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// Main window: scans on the left, viewer on the right.
+/// Main window: scans on the left, viewer in the middle, inspector on the right.
 struct ContentView: View {
     @Environment(AppModel.self) private var model
+    @Environment(ViewerController.self) private var viewer
+    @State private var showInspector = false
 
     var body: some View {
         @Bindable var model = model
@@ -11,8 +13,15 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 230, ideal: 270, max: 400)
         } detail: {
             ViewerPane()
+                .inspector(isPresented: $showInspector) {
+                    InspectorView()
+                        .inspectorColumnWidth(min: 270, ideal: 300, max: 400)
+                }
         }
-        .toolbar { MainToolbar() }
+        .toolbar { MainToolbar(showInspector: $showInspector) }
+        .onChange(of: viewer.loadedScan == nil) { _, noScan in
+            if !noScan { showInspector = true }
+        }
         .dropDestination(for: URL.self) { urls, _ in
             model.importItems(urls)
             return true
@@ -36,6 +45,8 @@ private struct ViewerPane: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            ViewerControlBar()
+            Divider()
             ZStack {
                 NiiVueView(controller: viewer)
                 overlay
@@ -99,6 +110,10 @@ private struct StatusBar: View {
 
     var body: some View {
         HStack(spacing: 16) {
+            if let c = viewer.windowCenter, let w = viewer.windowWidth {
+                Label("Level \(Int(c.rounded()))  Width \(Int(w.rounded()))", systemImage: "circle.lefthalf.filled")
+                    .help("Current brightness (level) and contrast (width)")
+            }
             if !viewer.volumeInfo.isEmpty {
                 Text(viewer.volumeInfo)
             }
@@ -114,6 +129,7 @@ private struct StatusBar: View {
 
 private struct MainToolbar: ToolbarContent {
     @Environment(AppModel.self) private var model
+    @Binding var showInspector: Bool
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
@@ -123,6 +139,14 @@ private struct MainToolbar: ToolbarContent {
                 Label("Open…", systemImage: "folder").labelStyle(.titleAndIcon)
             }
             .help("Open a NIfTI file, DICOM files or a DICOM folder from this Mac (⌘O)")
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button {
+                showInspector.toggle()
+            } label: {
+                Label(showInspector ? "Hide Panel" : "Show Panel", systemImage: "sidebar.right").labelStyle(.titleAndIcon)
+            }
+            .help("Show or hide the panel with scan details and 3D options")
         }
     }
 }
