@@ -1,12 +1,13 @@
 import AppKit
 import Observation
 
-/// Coordinates opening files and the viewer. Views call into this.
+/// Coordinates opening files, Recent scans and the viewer. Views call into this.
 @Observable
 final class AppModel {
+    let recents = RecentScans()
     let viewer = ViewerController()
 
-    /// Scans opened this session. They disappear when the app quits.
+    /// Scans opened this session and not kept in Recent scans. They disappear when the app quits.
     private(set) var openedScans: [Scan] = []
     private(set) var selectedScanID: Scan.ID?
 
@@ -22,7 +23,7 @@ final class AppModel {
     }
 
     var selectedScan: Scan? {
-        openedScans.first { $0.id == selectedScanID }
+        recents.scan(withID: selectedScanID) ?? openedScans.first { $0.id == selectedScanID }
     }
 
     // MARK: - Opening
@@ -62,7 +63,7 @@ final class AppModel {
         }
     }
 
-    /// Shows a scan the importer found.
+    /// Shows a scan the importer found. It isn't added to Recent scans until the user asks.
     func open(_ scan: Scan) {
         if !openedScans.contains(where: { $0.id == scan.id }) {
             openedScans.insert(scan, at: 0)
@@ -77,12 +78,66 @@ final class AppModel {
             viewer.unload()
             return
         }
+        // A recent scan's files may have been moved or deleted since it was added.
+        if scan.isRecent && !recents.checkAvailability(of: scan) {
+            viewer.unload()
+            message = UserMessage(
+                title: "Scan not found",
+                detail: "“\(scan.name)” is no longer where it was. It may have been moved, renamed or deleted, or its drive isn't connected.\n\nRight-click it in Recent scans to remove it from the list.")
+            return
+        }
         viewer.load(scan)
     }
 
-    /// Removes an opened scan from the sidebar.
+    /// Removes an opened scan (not in Recent scans) from the sidebar.
     func close(_ scan: Scan) {
         openedScans.removeAll { $0.id == scan.id }
         if selectedScanID == scan.id { select(nil) }
+    }
+
+    // MARK: - Recent scans
+
+    /// Remembers where a scan is so it can be reopened quickly. Nothing is copied.
+    func addToRecents(_ scan: Scan) {
+        guard !scan.isRecent else { return }
+        do {
+            let kept = try recents.add(scan)
+            openedScans.removeAll { $0.id == scan.id }
+            viewer.updateLoadedScan(kept)
+        } catch {
+            message = UserMessage(title: "Couldn't add to Recent scans", detail: error.localizedDescription)
+        }
+    }
+
+    func addAllToRecents(_ scans: [Scan]) {
+        for scan in scans where recents.scan(withID: scan.id) == nil {
+            do {
+                _ = try recents.add(scan)
+            } catch {
+                message = UserMessage(title: "Couldn't add \(scan.name) to Recent scans", detail: error.localizedDescription)
+                return
+            }
+        }
+    }
+
+    /// Changes the name shown in the app. The scan's files are not renamed.
+    func rename(_ scan: Scan, to newName: String) {
+        recents.rename(scan, to: newName)
+        if let renamed = recents.scan(withID: scan.id) { viewer.updateLoadedScan(renamed) }
+    }
+
+    /// Forgets a scan. Its files are not touched. If it's open, it stays open for this session.
+    func removeFromRecents(_ scan: Scan) {
+        let wasMissing = recents.isMissing(scan.id)
+        recents.remove(scan)
+        guard selectedScanID == scan.id else { return }
+        if wasMissing {
+            select(nil)
+        } else {
+            var opened = scan
+            opened.isRecent = false
+            openedScans.insert(opened, at: 0)
+            viewer.updateLoadedScan(opened)
+        }
     }
 }

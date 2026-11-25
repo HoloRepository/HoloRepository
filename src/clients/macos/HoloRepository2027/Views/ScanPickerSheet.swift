@@ -10,7 +10,7 @@ struct ScanPickerSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Choose a scan to open").font(.title2.weight(.semibold))
-            Text("What you picked contains \(result.scans.count) scans. Choose one to open.")
+            Text("What you picked contains \(result.scans.count) scans. Open one now, or add them all to Recent scans.")
                 .foregroundStyle(.secondary)
 
             List(result.scans, selection: $selection) { scan in
@@ -34,6 +34,11 @@ struct ScanPickerSheet: View {
             }
 
             HStack {
+                Button("Add All to Recent Scans") {
+                    model.addAllToRecents(result.scans)
+                    dismiss()
+                }
+                .help("Remember where every scan listed here is, so you can reopen them quickly. Nothing is copied.")
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
