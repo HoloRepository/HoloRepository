@@ -33,6 +33,7 @@ private struct ScanSection: View {
                 }
                 LabeledContent("Format", value: scan.format.title)
                 if !scan.modality.isEmpty { LabeledContent("Modality", value: scan.modality) }
+                LabeledContent("Recent scans", value: scan.isRecent ? "Yes" : "No (opened this session)")
                 if let folder = scan.imageFiles.first?.deletingLastPathComponent() {
                     LabeledContent("Location") {
                         Text(Self.abbreviated(folder)).lineLimit(2).truncationMode(.middle).textSelection(.enabled)

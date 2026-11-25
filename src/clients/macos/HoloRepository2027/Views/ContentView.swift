@@ -141,6 +141,14 @@ private struct MainToolbar: ToolbarContent {
             .help("Open a NIfTI file, DICOM files or a DICOM folder from this Mac (⌘O)")
         }
         ToolbarItemGroup(placement: .primaryAction) {
+            if let scan = model.selectedScan, !scan.isRecent {
+                Button {
+                    model.addToRecents(scan)
+                } label: {
+                    Label("Add to Recent", systemImage: "clock.arrow.circlepath").labelStyle(.titleAndIcon)
+                }
+                .help("Remember where this scan is so you can reopen it quickly. Nothing is copied. (⌘S)")
+            }
             Button {
                 showInspector.toggle()
             } label: {
