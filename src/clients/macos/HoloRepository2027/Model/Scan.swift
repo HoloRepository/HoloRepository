@@ -18,6 +18,8 @@ nonisolated enum ScanFormat: String, Codable, Sendable {
 /// One scan the user can view: either a DICOM series or a NIfTI volume.
 ///
 /// A scan is always read from where its files already are; the app never copies it.
+/// It is either just *opened* (forgotten when the app quits) or kept in *Recent scans*
+/// (the app remembers where it is, so it can be reopened quickly).
 nonisolated struct Scan: Identifiable, Hashable, Sendable {
     let id: UUID
     var name: String
@@ -27,6 +29,9 @@ nonisolated struct Scan: Identifiable, Hashable, Sendable {
     /// Short human-readable description, e.g. "129 slices · 3 Jan 2002".
     var summary: String
     var imageFiles: [URL]
+    /// True when the scan is kept in Recent scans.
+    var isRecent: Bool
+    var addedAt: Date
 
     var symbol: String {
         switch format {
@@ -36,13 +41,15 @@ nonisolated struct Scan: Identifiable, Hashable, Sendable {
     }
 
     init(id: UUID = UUID(), name: String, format: ScanFormat, modality: String, summary: String,
-         imageFiles: [URL]) {
+         imageFiles: [URL], isRecent: Bool = false, addedAt: Date = .now) {
         self.id = id
         self.name = name
         self.format = format
         self.modality = modality
         self.summary = summary
         self.imageFiles = imageFiles
+        self.isRecent = isRecent
+        self.addedAt = addedAt
     }
 }
 

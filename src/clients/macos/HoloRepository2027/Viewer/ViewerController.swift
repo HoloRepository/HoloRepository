@@ -179,6 +179,12 @@ final class ViewerController {
              ["name": scan.name, "format": scan.format.rawValue, "urls": urls, "names": names])
     }
 
+    /// Updates the scan's details (e.g. after saving it) without reloading the images.
+    func updateLoadedScan(_ scan: Scan) {
+        guard loadedScan?.id == scan.id else { return }
+        loadedScan = scan
+    }
+
     func unload() {
         loadedScan = nil
         status = .idle

@@ -9,6 +9,10 @@
 	     Opened scans are only ever read; the app never modifies original files. -->
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>
+	<!-- Lets Recent scans remember where scans are (security-scoped bookmarks), so they can be
+	     reopened after a restart without copying any files. -->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
 	<!-- Required by WKWebView: WebKit runs NiiVue in helper processes (WebContent,
 	     Networking, GPU) that will not launch in a sandboxed app without it.
 	     The viewer page itself is locked down by a Content-Security-Policy in
