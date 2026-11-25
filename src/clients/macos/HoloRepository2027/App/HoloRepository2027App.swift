@@ -21,6 +21,17 @@ struct HoloRepository2027App: App {
                 Button("Open Scan…") { model.showOpenPanel() }
                     .keyboardShortcut("o")
             }
+            // Added to the standard View menu (a CommandMenu would create a second "View").
+            CommandGroup(before: .toolbar) {
+                ForEach(SliceLayout.allCases) { layout in
+                    Button(layout.title) { model.viewer.setLayout(layout) }
+                        .keyboardShortcut(layout.shortcut, modifiers: .command)
+                }
+                Divider()
+                Button("Reset View") { model.viewer.resetView() }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                Divider()
+            }
         }
     }
 }
