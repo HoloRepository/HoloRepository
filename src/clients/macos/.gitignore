@@ -1,0 +1,9 @@
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+WebViewer/node_modules/
+
+# Local development tools (mock server, synthetic phantom). Never uploaded.
+dev-tools/
