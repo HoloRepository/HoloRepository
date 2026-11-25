@@ -1,17 +1,33 @@
 import SwiftUI
 
-/// Main window: the NiiVue viewer.
+/// Main window: scans on the left, viewer on the right.
 struct ContentView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         @Bindable var model = model
-        ViewerPane()
-            .toolbar { MainToolbar() }
-            .alert(item: $model.message) { message in
-                Alert(title: Text(message.title), message: Text(message.detail))
-            }
+        NavigationSplitView {
+            SidebarView()
+                .navigationSplitViewColumnWidth(min: 230, ideal: 270, max: 400)
+        } detail: {
+            ViewerPane()
+        }
+        .toolbar { MainToolbar() }
+        .dropDestination(for: URL.self) { urls, _ in
+            model.importItems(urls)
+            return true
+        }
+        .sheet(item: $model.importChoice) { result in
+            ScanPickerSheet(result: result)
+        }
+        .alert(item: $model.message) { message in
+            Alert(title: Text(message.title), message: Text(message.detail))
+        }
     }
+}
+
+extension ImportResult: Identifiable {
+    var id: [Scan.ID] { scans.map(\.id) }
 }
 
 private struct ViewerPane: View {
@@ -58,7 +74,7 @@ private struct WelcomeView: View {
         VStack(spacing: 14) {
             Image(systemName: "cube.transparent").font(.system(size: 48)).foregroundStyle(.secondary)
             Text("Open a scan to get started").font(.title2.weight(.semibold))
-            Text("Choose a NIfTI file (.nii, .nii.gz) from this Mac.")
+            Text("NIfTI (.nii, .nii.gz) files, DICOM (.dcm) files, or a folder with a DICOM series.\nYou can also drag files onto this window.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
             Button {
@@ -69,6 +85,8 @@ private struct WelcomeView: View {
             }
             .controlSize(.large)
             .buttonStyle(.borderedProminent)
+            .disabled(model.isImporting)
+            if model.isImporting { ProgressView("Looking for scans…").controlSize(.small) }
         }
         .padding(30)
         .background(.regularMaterial, in: .rect(cornerRadius: 14))
@@ -104,7 +122,7 @@ private struct MainToolbar: ToolbarContent {
             } label: {
                 Label("Open…", systemImage: "folder").labelStyle(.titleAndIcon)
             }
-            .help("Open a NIfTI file from this Mac (⌘O)")
+            .help("Open a NIfTI file, DICOM files or a DICOM folder from this Mac (⌘O)")
         }
     }
 }
