@@ -5,5 +5,15 @@
 	<!-- App Sandbox: the app can only touch files the user explicitly picks. -->
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- Read-only access to files/folders the user picks in the Open panel.
+	     Opened scans are only ever read; the app never modifies original files. -->
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+	<!-- Required by WKWebView: WebKit runs NiiVue in helper processes (WebContent,
+	     Networking, GPU) that will not launch in a sandboxed app without it.
+	     The viewer page itself is locked down by a Content-Security-Policy in
+	     WebViewer/index.html, so it can only load files from inside the app. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
 </dict>
 </plist>

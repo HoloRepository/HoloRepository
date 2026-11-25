@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1B2C3D40000000000000010 /* WebViewer in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000011 /* WebViewer */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A1B2C3D40000000000000001 /* HoloRepository2027.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HoloRepository2027.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D40000000000000011 /* WebViewer */ = {isa = PBXFileReference; lastKnownFileType = folder; path = WebViewer; sourceTree = "<group>"; };
 		A1B2C3D40000000000000012 /* HoloRepository2027.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HoloRepository2027.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -37,6 +39,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D40000000000000002 /* HoloRepository2027 */,
+				A1B2C3D40000000000000011 /* WebViewer */,
 				A1B2C3D40000000000000031 /* Config */,
 				A1B2C3D40000000000000032 /* Products */,
 			);
@@ -122,6 +125,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1B2C3D40000000000000010 /* WebViewer in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
