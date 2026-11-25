@@ -1,0 +1,9 @@
+{
+  "name": "holorepository2027-webviewer",
+  "private": true,
+  "description": "Pinned versions of the NiiVue packages copied into vendor/ by scripts/update-niivue.sh",
+  "dependencies": {
+    "@niivue/niivue": "0.69.0",
+    "@niivue/dcm2niix": "1.4.20261029"
+  }
+}
