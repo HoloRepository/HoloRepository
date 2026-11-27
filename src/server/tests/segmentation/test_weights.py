@@ -53,6 +53,12 @@ def test_fetches_only_what_is_missing(folder, downloads):
     assert downloads == ["metadata.json", "LICENSE"]
 
 
+def test_logs_each_download(folder, downloads, caplog):
+    with caplog.at_level("INFO", logger=weights.__name__):
+        weights.ensure_weights()
+    assert sum("downloaded" in r.message for r in caplog.records) == len(weights.FILES)
+
+
 def test_offline_and_missing_names_the_folder(folder, monkeypatch):
     def offline(*args, **kwargs):
         raise OSError("no network")

@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
 from auth import CurrentUser
+from log import setup_logging
 from models import (
     FileType,
     Job,
@@ -33,6 +34,7 @@ Durations are in seconds. Display `.mz3` meshes with
 [NiiVue](https://niivue.com/docs/guide/meshes/).
 """
 
+setup_logging()
 app = FastAPI(title="HoloRepository API", version="0.1.0", description=DESCRIPTION)
 
 

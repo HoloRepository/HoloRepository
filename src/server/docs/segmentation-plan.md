@@ -202,6 +202,14 @@ Agreed with the meshing team member:
 - Each job logs the time of every stage (upload reading, preprocessing, inference, mapping back, add-ons,
   post-processing, writing) and a run record: package versions, model revision, device, precision and settings.
   Written next to the job's outputs as `run.json`.
+- **Logging (decided 2026-11-27).** Proper logging is crucial: clients run an installed server with no terminal, so
+  the log is how an error gets traced back. Log only where it is really needed (startup, downloads, each job's
+  start / end / stage times, failures with their traceback, fallbacks such as a CPU path or a failed add-on), not
+  routine steps; the codebase must not bloat with log lines.
+  - Python's built-in `logging`, one `logging.getLogger(__name__)` per module; set up once in `src/log.py`, called
+    from `main.py`.
+  - Console plus a rotating file `$HOLO_DATA_DIR/logs/server.log` (5 × 10 MB); uvicorn's error log (unhandled
+    route exceptions) goes to the file too. Level from `HOLO_LOG_LEVEL`, default `INFO`.
 
 ## 12. Code layout
 
