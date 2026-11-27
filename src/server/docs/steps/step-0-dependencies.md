@@ -90,7 +90,8 @@ uv configuration:
   - Missing files and no network → the server refuses to start with a message naming the folder and the files.
   - A download that is interrupted leaves no half-written file in place (`huggingface_hub` writes to a temporary
     file and renames it when complete), and the next start resumes it.
-  - The same function is callable on its own (e.g. `uv run python -m segmentation.weights`), so an installer or a
+  - The same function is callable on its own (e.g. `uv run python -m segmentation.engines.nv_segment_ct.weights`; moved there
+    from `segmentation/weights.py` in step 2, 2026-11-27), so an installer or a
     machine without network at runtime can fetch the files ahead of time.
 - Weights for the add-ons are **not** downloaded here; that is step 6 ("downloaded at startup if the extra is
   installed").

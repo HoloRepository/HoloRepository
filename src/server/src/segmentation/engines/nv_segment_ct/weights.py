@@ -1,7 +1,7 @@
 """NV-Segment-CT model files: find them in the data folder, or download the pinned revision.
 
 Run on its own to fetch the files ahead of time:
-    cd src && uv run python -m segmentation.weights
+    cd src && uv run python -m segmentation.engines.nv_segment_ct.weights
 """
 
 import logging

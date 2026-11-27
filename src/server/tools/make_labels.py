@@ -14,7 +14,7 @@ from pathlib import Path
 SERVER = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SERVER / "src"))
 
-from segmentation.weights import ensure_weights
+from segmentation.engines.nv_segment_ct.weights import ensure_weights
 
 OUT = SERVER / "src" / "segmentation" / "labels.json"
 PARENTS = {

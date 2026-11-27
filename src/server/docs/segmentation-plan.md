@@ -221,12 +221,17 @@ src/segmentation/
   devices.py        device choice, precision, free memory
   ct_input.py       upload → standard CT (safe zip, series choice, checks)
   labels.py         shared label list (labels.json)
-  engines/          lookup table + nv_segment_ct.py
+  timing.py         per-job stage timer
+  engines/          Engine interface + lookup table
+    nv_segment_ct/  one package per base model: the engine + its weights.py (download of its model files)
   addons.py         TotalSegmentator add-ons
   postprocess.py    stray-blob removal
   pipeline.py       run one job end to end
   runner.py         temporary queue
 tests/segmentation/ fast unit tests (default) + slow GPU/weights tests (opt-in)
+
+A new base model = one package under `engines/` (engine + its own model files) and one lookup-table entry
+(decided 2026-11-27).
 tools/benchmark/    step 4 and step 8 scripts (score against expert labels and reference maps)
 ```
 

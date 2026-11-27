@@ -206,7 +206,7 @@ def check_model_load(device, state):
     from monai.networks.nets.vista3d import vista3d132
     from safetensors.torch import load_file
 
-    from segmentation.weights import WEIGHTS, ensure_weights  # pyright: ignore[reportMissingImports] (src/ added to sys.path above)
+    from segmentation.engines.nv_segment_ct.weights import WEIGHTS, ensure_weights  # pyright: ignore[reportMissingImports] (src/ added to sys.path above)
 
     files = ensure_weights()
     weights = {k.removeprefix("network."): v for k, v in load_file(files[WEIGHTS]).items()}

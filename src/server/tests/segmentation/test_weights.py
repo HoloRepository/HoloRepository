@@ -2,7 +2,7 @@ import pytest
 import torch
 from safetensors.torch import load_file, save_file
 
-from segmentation import weights
+from segmentation.engines.nv_segment_ct import weights
 
 
 @pytest.fixture
