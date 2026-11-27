@@ -79,8 +79,6 @@ def render_operation(method: str, path: str, op: dict, schemas: dict) -> list[st
     out = [f"### `{method.upper()} {path}`", ""]
     if op.get("description"):
         out += [op["description"].strip(), ""]
-    out += [f"**Auth:** {'bearer token' if op.get('security') else 'none'}", ""]
-
     params = op.get("parameters", [])
     if params:
         out += ["**Parameters**", "", "| Name | In | Type | Required | Description |"]

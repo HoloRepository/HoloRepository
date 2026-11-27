@@ -8,9 +8,8 @@ dependencies = [
     "fastapi[standard]>=0.163.1",
     "nibabel>=5.4.2",
     "numpy>=2.5.4",
-    "pwdlib[argon2]>=0.4.2",
-    "pyjwt>=2.15.1",
     "python-multipart>=0.0.34",
     "scikit-image>=0.26.0",
+    "tortoise-orm>=1.1.9",
     "trimesh>=5.1.1",
 ]

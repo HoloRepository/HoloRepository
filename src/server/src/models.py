@@ -56,18 +56,3 @@ class Job(BaseModel):
 
     id: str = Field(description="Use with `GET /job-status`.")
 
-
-class User(BaseModel):
-    """A signed-in user."""
-
-    id: str
-    username: str
-
-
-class Token(BaseModel):
-    """Access token returned by `POST /token`."""
-
-    access_token: str = Field(
-        description="Send as `Authorization: Bearer <token>` on every other request."
-    )
-    token_type: str = "bearer"

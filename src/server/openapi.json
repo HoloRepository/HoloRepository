@@ -2,121 +2,10 @@
   "openapi": "3.1.0",
   "info": {
     "title": "HoloRepository API",
-    "description": "\nThe API accepts one ZIP archive of DICOM files or one NIfTI file, segments it with a\nselected model, and returns downloadable results, including an `.mz3` mesh.\n\n## Client workflow\n\n1. Create an account with `POST /signup`, then sign in with `POST /token`.\n2. Upload a file and pick a model with `POST /new-job`.\n3. Poll `GET /job-status?job_id=...` until `status` is `done`.\n4. Find the record's files with `GET /records`, then download each with\n   `GET /files/{file_id}`.\n\nEvery endpoint except `/signup` and `/token` needs `Authorization: Bearer <token>`.\n\nDurations are in seconds. Display `.mz3` meshes with\n[NiiVue](https://niivue.com/docs/guide/meshes/).\n",
+    "description": "\nThe API accepts one ZIP archive of DICOM files or one NIfTI file, segments it with a\nselected model, and returns downloadable results, including an `.mz3` mesh.\n\n## Client workflow\n\n1. Upload a file and pick a model with `POST /new-job`.\n2. Poll `GET /job-status?job_id=...` until `status` is `done`.\n3. Find the record's files with `GET /records`, then download each with\n   `GET /files/{file_id}`.\n\nDurations are in seconds. Display `.mz3` meshes with\n[NiiVue](https://niivue.com/docs/guide/meshes/).\n",
     "version": "0.1.0"
   },
   "paths": {
-    "/signup": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Sign Up",
-        "description": "Create an account.",
-        "operationId": "sign_up_signup_post",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_sign_up_signup_post"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/User"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/token": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Sign In",
-        "description": "Sign in with `username` and `password` form fields and get an access token.",
-        "operationId": "sign_in_token_post",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_sign_in_token_post"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Token"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/me": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Read Me",
-        "description": "Return the signed-in user.",
-        "operationId": "read_me_me_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/User"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      }
-    },
     "/new-job": {
       "post": {
         "tags": [
@@ -156,12 +45,7 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
+        }
       }
     },
     "/job-status": {
@@ -172,11 +56,6 @@
         "summary": "Get Job Status",
         "description": "Get a processing job's status.",
         "operationId": "get_job_status_job_status_get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -235,12 +114,7 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
+        }
       }
     },
     "/files/{file_id}": {
@@ -251,11 +125,6 @@
         "summary": "Download File",
         "description": "Download a file's raw bytes.",
         "operationId": "download_file_files__file_id__get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "file_id",
@@ -312,88 +181,6 @@
           "file_type"
         ],
         "title": "Body_create_job_new_job_post"
-      },
-      "Body_sign_in_token_post": {
-        "properties": {
-          "grant_type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^password$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Grant Type"
-          },
-          "username": {
-            "type": "string",
-            "title": "Username"
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "title": "Password"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope",
-            "default": ""
-          },
-          "client_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Client Id"
-          },
-          "client_secret": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "format": "password",
-            "title": "Client Secret"
-          }
-        },
-        "type": "object",
-        "required": [
-          "username",
-          "password"
-        ],
-        "title": "Body_sign_in_token_post"
-      },
-      "Body_sign_up_signup_post": {
-        "properties": {
-          "username": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 3,
-            "pattern": "^[A-Za-z0-9_.-]+$",
-            "title": "Username"
-          },
-          "password": {
-            "type": "string",
-            "maxLength": 128,
-            "minLength": 8,
-            "title": "Password"
-          }
-        },
-        "type": "object",
-        "required": [
-          "username",
-          "password"
-        ],
-        "title": "Body_sign_up_signup_post"
       },
       "FileRecord": {
         "properties": {
@@ -521,45 +308,6 @@
         "title": "Status",
         "description": "Processing state of a job."
       },
-      "Token": {
-        "properties": {
-          "access_token": {
-            "type": "string",
-            "title": "Access Token",
-            "description": "Send as `Authorization: Bearer <token>` on every other request."
-          },
-          "token_type": {
-            "type": "string",
-            "title": "Token Type",
-            "default": "bearer"
-          }
-        },
-        "type": "object",
-        "required": [
-          "access_token"
-        ],
-        "title": "Token",
-        "description": "Access token returned by `POST /token`."
-      },
-      "User": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "username": {
-            "type": "string",
-            "title": "Username"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "username"
-        ],
-        "title": "User",
-        "description": "A signed-in user."
-      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -599,17 +347,6 @@
           "type"
         ],
         "title": "ValidationError"
-      }
-    },
-    "securitySchemes": {
-      "OAuth2PasswordBearer": {
-        "type": "oauth2",
-        "flows": {
-          "password": {
-            "scopes": {},
-            "tokenUrl": "token"
-          }
-        }
       }
     }
   }
