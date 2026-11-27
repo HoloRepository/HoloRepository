@@ -67,7 +67,9 @@ def peak_gb(device: torch.device) -> tuple[float | None, str]:
     if device.type in ("cuda", "xpu"):
         return round(getattr(torch, device.type).max_memory_allocated() / GB, 2), "max_memory_allocated"
     if device.type == "mps":  # MPS has no peak counter; this is what the driver holds after the run
-        return round(torch.mps.driver_allocated_memory() / GB, 2), "driver_allocated_memory (after run, not a true peak)"
+        return round(
+            torch.mps.driver_allocated_memory() / GB, 2
+        ), "driver_allocated_memory (after run, not a true peak)"
     return None, "not measured on CPU"
 
 
@@ -85,7 +87,7 @@ def system_ram_gb() -> float | None:
         return round(status.total / GB, 1)
     try:
         return round(os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / GB, 1)
-    except (ValueError, OSError, AttributeError):
+    except ValueError, OSError, AttributeError:
         return None
 
 
@@ -116,7 +118,10 @@ def nvidia_driver() -> str | None:
     if not shutil.which("nvidia-smi"):
         return None
     out = subprocess.run(
-        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"], capture_output=True, text=True, check=False
+        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     return out.stdout.strip() or None
 
@@ -170,6 +175,7 @@ def check_grid_sample(device):
     gen = torch.Generator().manual_seed(0)
     image = torch.rand(1, 2, 40, 36, 32, generator=gen)
     grid = torch.rand(1, 24, 20, 16, 3, generator=gen) * 2.2 - 1.1  # some points outside, to exercise border padding
+
     def sample(img, grd):
         return F.grid_sample(img, grd, mode="bilinear", padding_mode="border", align_corners=False)
 
@@ -232,7 +238,9 @@ def check_one_window(device, state, precisions):
         return out
 
     results = {}
-    for name, dtype in [("fp32", None)] + [(p, getattr(torch, {"fp16": "float16", "bf16": "bfloat16"}[p])) for p in precisions]:
+    for name, dtype in [("fp32", None)] + [
+        (p, getattr(torch, {"fp16": "float16", "bf16": "bfloat16"}[p])) for p in precisions
+    ]:
         try:
             run(dtype)  # warm-up, not timed
             reset_peak(device)
@@ -278,10 +286,13 @@ def main() -> None:
         try:
             status, details = fn(*args)
         except Exception as error:
-            status, details = "fail", {
-                "error": f"{type(error).__name__}: {error}",
-                "traceback": traceback.format_exc(limit=3),
-            }
+            status, details = (
+                "fail",
+                {
+                    "error": f"{type(error).__name__}: {error}",
+                    "traceback": traceback.format_exc(limit=3),
+                },
+            )
         report["checks"][name] = {"status": status, **details}
         return status, details
 

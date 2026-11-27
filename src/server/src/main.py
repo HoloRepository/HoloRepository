@@ -43,9 +43,7 @@ app = FastAPI(title="HoloRepository API", version="0.1.0", description=DESCRIPTI
 
 @app.post("/signup", tags=["auth"], status_code=status.HTTP_201_CREATED)
 async def sign_up(
-    username: Annotated[
-        str, Form(min_length=3, max_length=64, pattern=r"^[A-Za-z0-9_.-]+$")
-    ],
+    username: Annotated[str, Form(min_length=3, max_length=64, pattern=r"^[A-Za-z0-9_.-]+$")],
     password: Annotated[str, Form(min_length=8, max_length=128)],
 ) -> User:
     """Create an account."""
