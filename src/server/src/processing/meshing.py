@@ -32,3 +32,12 @@ def meshing(image: SpatialImage) -> trimesh.Trimesh | None:
     mesh.fix_normals(multibody=True)
     _ = trimesh.smoothing.filter_taubin(mesh, lamb=0.5, nu=0.53, iterations=20)
     return mesh
+
+
+def mesh_labels(image: SpatialImage) -> dict[int, trimesh.Trimesh]:
+    """Mesh each label value in a segmentation separately.
+
+    Returns a mesh per non-zero label, keyed by label value, so each structure can
+    get its own colour or texture. Labels with no voxels are left out.
+    """
+    ...

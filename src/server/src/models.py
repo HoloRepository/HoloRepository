@@ -21,6 +21,13 @@ class FileType(StrEnum):
     mz3 = "mz3"
 
 
+class MeshStyle(StrEnum):
+    """How a mesh is coloured. Both styles of one record share the same geometry."""
+
+    coloured = "coloured"
+    textured = "textured"
+
+
 class SegmentationModel(StrEnum):
     """Model used to segment the upload."""
 
@@ -35,6 +42,11 @@ class FileRecord(BaseModel):
 
     id: str = Field(description="Use with `GET /files/{file_id}`.")
     file_type: FileType
+    mesh_style: MeshStyle | None = Field(
+        default=None,
+        description="Set for `mz3` files only. Show one style at a time and switch "
+        "between them to toggle colours and textures.",
+    )
 
 
 class Record(BaseModel):

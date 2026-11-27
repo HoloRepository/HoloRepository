@@ -191,6 +191,17 @@
           },
           "file_type": {
             "$ref": "#/components/schemas/FileType"
+          },
+          "mesh_style": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeshStyle"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set for `mz3` files only. Show one style at a time and switch between them to toggle colours and textures."
           }
         },
         "type": "object",
@@ -263,6 +274,15 @@
         ],
         "title": "JobStatus",
         "description": "Status of a processing job."
+      },
+      "MeshStyle": {
+        "type": "string",
+        "enum": [
+          "coloured",
+          "textured"
+        ],
+        "title": "MeshStyle",
+        "description": "How a mesh is coloured. Both styles of one record share the same geometry."
       },
       "Record": {
         "properties": {

@@ -76,6 +76,7 @@ A single file. Download it with `GET /files/{file_id}`.
 | -- | -- | -- | -- |
 | `id` | `string` | yes | Use with `GET /files/{file_id}`. |
 | `file_type` | [`FileType`](#filetype) | yes |  |
+| `mesh_style` | [`MeshStyle`](#meshstyle) \| `null` | no | Set for `mz3` files only. Show one style at a time and switch between them to toggle colours and textures. |
 
 ### `FileType`
 
@@ -99,6 +100,12 @@ Status of a processing job.
 | -- | -- | -- | -- |
 | `status` | [`Status`](#status) | yes |  |
 | `msg` | `string` \| `null` | no |  |
+
+### `MeshStyle`
+
+How a mesh is coloured. Both styles of one record share the same geometry.
+
+Values: `coloured`, `textured`
 
 ### `Record`
 
