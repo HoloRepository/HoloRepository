@@ -132,6 +132,11 @@ Each check reports pass / fail / not applicable and never stops the others.
 - The existing server still starts (`cd src && uv run fastapi dev main.py`) and `scripts/generate_contract.py`
   still runs. Meshing code is untouched.
 - The smoke script passes on each machine, or each failure is understood and recorded in the issue.
+- Unit tests (decided 2026-11-27, brought forward from step 1): `pytest` as a dev dependency;
+  `tests/segmentation/` checks `data_dir()` per platform and `ensure_weights()` with a fake download (no network
+  when present, fetches only what is missing, offline error names the folder, damaged file fails). One slow test
+  (`-m slow`) loads the real weights into `vista3d132` with a strict key match (the file's keys carry a `network.`
+  prefix that is removed first).
 
 ## Runs on your machines
 
