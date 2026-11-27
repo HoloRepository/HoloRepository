@@ -174,7 +174,8 @@ Agreed with the meshing team member:
 - ZIP: reject entries that escape the target folder (`../`, absolute paths). No size or file-count limits for now
   (decided 2026-11-27; see section 15).
 - DICOM: the series with the most files (ties → lowest `SeriesInstanceUID` (always present; not meaningful, just repeatable), logged); `Modality` must be `CT`; non-uniform slice spacing
-  (slice gaps more than 1% of the spacing off even → non-uniform) or gantry tilt → 400. Decided 2026-11-27.
+  (slice gaps more than 1% of the spacing off even → non-uniform) or gantry tilt
+  (any sideways drift between slices over 1% of the slice spacing, about 0.6°) → 400. Enhanced (multi-frame, one-file) DICOM → 400 for now (section 15). Decided 2026-11-27.
 - NIfTI: accepted without a modality check; 4D uses the first time point; anything not 3D → 400.
 - Output: Int16 HU CT on the original grid, kept in memory for the job and written once as `ct.nii`
   (uncompressed, decided 2026-11-27).
@@ -290,6 +291,9 @@ TensorRT (NVIDIA) / OpenVINO (Intel) runtimes, to revisit only if the step 0 tim
   number of files in a ZIP. A huge upload or a ZIP bomb can fill the disk or memory. To add later: limits sized from
   the largest real scan (a 734-slice 512 × 512 CT is about 0.4 GB of pixels), changeable per machine with `HOLO_`
   environment variables, checked while extracting rather than from the ZIP's declared sizes.
+- **Enhanced (multi-frame) DICOM (decided 2026-11-27: not for now).** Some newer scanners save a whole scan as one
+  file. Such uploads get a 400 asking for one file per slice. Future extension: read the per-frame positions from
+  the file's functional groups and apply the same spacing and tilt checks (~40 lines in `ct_input.py`).
 - **Blocking upload reading.** `/new-job` is `async def`; reading the CT inside it blocks the event loop, so every
   other request (including `/job-status` polls) waits until the upload is read. Whoever owns the server runtime
   should move that work onto a worker thread.

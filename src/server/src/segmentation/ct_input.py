@@ -1,3 +1,4 @@
+import logging
 import re
 import shutil
 import stat
@@ -9,13 +10,19 @@ from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 from typing import BinaryIO
 
+import numpy as np
 import SimpleITK as sitk
 
 from models import FileType
 
+log = logging.getLogger(__name__)
+
 DRIVE = re.compile(r"^[A-Za-z]:")
 # Errors zipfile raises for a damaged, encrypted or unsupported archive.
 ZIP_ERRORS = (zipfile.BadZipFile, zlib.error, EOFError, RuntimeError, NotImplementedError)
+
+MODALITY, POSITION, ORIENTATION = "0008|0060", "0020|0032", "0020|0037"
+SPACING_TOLERANCE = 0.01  # fraction of the slice spacing
 
 
 class UploadError(Exception):
@@ -29,8 +36,8 @@ def read_upload(
         raise UploadError(f"Upload a ZIP of a DICOM folder or a NIfTI file, not '{file_type}'")
 
     if file_type == FileType.dicom:
-        with extracted_zip(file) as folder:  # noqa: F841 (step 1.3 reads the series from it)
-            ...
+        with extracted_zip(file) as folder:
+            image = read_dicom(folder)
 
     if file_type == FileType.nifti:
         ...
@@ -76,6 +83,80 @@ def safe_target(root: Path, info: zipfile.ZipInfo) -> Path:
     if not target.is_relative_to(root):
         raise UploadError(f"The ZIP contains a path outside its folder ('{info.filename}'), which is not allowed")
     return target
+
+
+def read_dicom(folder: Path) -> sitk.Image:
+    """The CT series with the most files in the folder tree, read in HU; UploadError if it can't be used."""
+    try:
+        files = choose_series(find_series(folder))
+        first = header(files[0])
+        modality = first.GetMetaData(MODALITY).strip() if first.HasMetaDataKey(MODALITY) else "unknown"
+        if modality != "CT":
+            raise UploadError(f"The DICOM series is '{modality}', not CT")
+        if len(files) < 2:
+            raise UploadError("The DICOM series has only one slice; a 3D CT scan is needed")
+        reader = sitk.ImageSeriesReader()
+        reader.SetFileNames(check_slices(files))
+        return reader.Execute()  # rescale slope and intercept applied, so values are HU
+    except RuntimeError as error:  # SimpleITK's error for unreadable files
+        raise UploadError("The DICOM files can't be read") from error
+
+
+def find_series(folder: Path) -> dict[str, list[str]]:
+    """Files per series UID, from every folder (GDCM only looks in one folder at a time)."""
+    series: dict[str, list[str]] = {}
+    folders = {path.parent for path in folder.rglob("*") if path.is_file()}  # skip folders with no files
+    for directory in sorted(folders):
+        for uid in sitk.ImageSeriesReader.GetGDCMSeriesIDs(str(directory)):
+            series.setdefault(uid, []).extend(sitk.ImageSeriesReader.GetGDCMSeriesFileNames(str(directory), uid))
+    if not series:
+        raise UploadError("The ZIP contains no DICOM series")
+    return series
+
+
+def choose_series(series: dict[str, list[str]]) -> list[str]:
+    """The series with the most files; ties go to the lowest SeriesInstanceUID (decided 2026-11-27)."""
+    ranked = sorted(series.items(), key=lambda item: (-len(item[1]), uid_order(item[0])))
+    uid, files = ranked[0]
+    tied = [other for other, other_files in ranked[1:] if len(other_files) == len(files)]
+    log.info("DICOM: %d series, chose %s (%d files)", len(series), uid, len(files))
+    if tied:
+        log.info("DICOM: tie on file count with %s; chose the lowest SeriesInstanceUID", ", ".join(tied))
+    return files
+
+
+def uid_order(uid: str) -> tuple[int, ...]:
+    """UIDs are dotted numbers; compare them as numbers, so 1.2.8 comes before 1.2.10."""
+    return tuple(int(part) if part.isdigit() else -1 for part in uid.split("."))
+
+
+def check_slices(files: list[str]) -> list[str]:
+    """Files sorted along the slice normal; UploadError for uneven spacing or a gantry tilt."""
+    headers = [header(name) for name in files]
+    if not all(h.HasMetaDataKey(POSITION) and h.HasMetaDataKey(ORIENTATION) for h in headers):
+        raise UploadError("The DICOM files have no slice positions")
+    orientation = np.array(headers[0].GetMetaData(ORIENTATION).split("\\"), dtype=float)
+    normal = np.cross(orientation[:3], orientation[3:])
+    positions = np.array([h.GetMetaData(POSITION).split("\\") for h in headers], dtype=float)
+    order = np.argsort(positions @ normal)
+    steps = np.diff(positions[order], axis=0)
+    along = steps @ normal  # distance between neighbouring slices
+    spacing = float(np.median(along))
+    if spacing <= 0:
+        raise UploadError("The DICOM series has slices at the same position")
+    if np.any(np.abs(along - spacing) > SPACING_TOLERANCE * spacing):
+        raise UploadError("The DICOM slices are unevenly spaced (a slice may be missing)")
+    sideways = np.linalg.norm(steps - np.outer(along, normal), axis=1)
+    if np.any(sideways > SPACING_TOLERANCE * spacing):
+        raise UploadError("The DICOM series has a gantry tilt, which is not supported")
+    return [files[i] for i in order]
+
+
+def header(path: str) -> sitk.ImageFileReader:
+    reader = sitk.ImageFileReader()
+    reader.SetFileName(path)
+    reader.ReadImageInformation()
+    return reader
 
 
 def write_ct(image: sitk.Image, path: Path) -> None:

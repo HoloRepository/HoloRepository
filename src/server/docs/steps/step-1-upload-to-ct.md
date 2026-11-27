@@ -23,7 +23,10 @@ direction) kept exactly. Anything unusable is rejected with a clear message that
 - **ZIP:** reject entries that escape the target folder (`../`, absolute paths). No size or file-count limits for
   now (decided 2026-11-27, documented gap in plan section 15).
 - **DICOM:** the series with the most files (ties → lowest `SeriesInstanceUID` (always present; not meaningful, just repeatable), logged); `Modality` must be `CT`; non-uniform slice
-  spacing (slice gaps more than 1% of the spacing off even → non-uniform) or gantry tilt → 400.
+  spacing (slice gaps more than 1% of the spacing off even → non-uniform) or gantry tilt
+  (any sideways drift between slices over 1% of the slice spacing, about 0.6°) → 400.
+- **Enhanced (multi-frame) DICOM:** one file holding the whole scan → 400 asking for one file per slice; future
+  extension in plan section 15 (decided 2026-11-27).
 - **NIfTI:** accepted without a modality check; 4D uses the first time point; anything not 3D → 400.
 - **Output:** Int16 HU CT on the original grid, kept in memory for the job and written once as `ct.nii`
   (uncompressed). Meshing's `labels.nii` will sit on exactly this grid (section 8).
@@ -61,7 +64,8 @@ direction) kept exactly. Anything unusable is rejected with a clear message that
 - Reject, with a message that says why:
   - **non-uniform slice spacing**: positions along the slice normal differ from evenly spaced by more than 1% of
     the slice spacing (missing slices also show up here);
-  - **gantry tilt**: the step between slices is not along the slice normal from `ImageOrientationPatient`;
+  - **gantry tilt**: the step between slices is not along the slice normal from `ImageOrientationPatient`
+    (sideways drift over 1% of the slice spacing, decided 2026-11-27);
   - fewer than 2 slices (not 3D).
 
 ### 1.4 NIfTI → image (`file_type = nifti`)
@@ -97,6 +101,7 @@ large is committed.
 | Spacing off by under 1% (rounding) | Read |
 | Two series with the same file count | Lowest `SeriesInstanceUID` chosen |
 | Tilted series | `UploadError` (gantry tilt) |
+| One multi-frame file | `UploadError` asking for one file per slice |
 | Corrupt ZIP, non-ZIP sent as `dicom` | `UploadError` |
 | Entry with `../`, absolute path, backslash escape, symlink | `UploadError`; nothing written outside the temp folder |
 | NIfTI 3D, `.nii` and `.nii.gz` | Read; geometry exact, including an oblique direction matrix |
