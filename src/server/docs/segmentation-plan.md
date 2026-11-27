@@ -4,7 +4,7 @@ Status: agreed 2026-11-24, updated 2026-11-26 with the demo eval results; not st
 scope here, except for the handover in [section 8](#8-handover-to-meshing).
 
 The prototype (`Holo-Prototype`, commit `df12711`) and its handoff are a **reference only**. The fixed points are
-the NV-Segment-CT model and the optional TotalSegmentator kidney and liver add-ons. Everything else was decided
+the [NV-Segment-CT](https://huggingface.co/nvidia/NV-Segment-CT) model and the optional TotalSegmentator kidney and liver add-ons. Everything else was decided
 here.
 
 **Goal:** the same or better accuracy than the prototype, at the fastest runtime we can get on NVIDIA, Intel Arc
@@ -68,7 +68,9 @@ embed dim 48, 1 input channel). Licence notice kept next to the weights. Loaded 
 process, warmed up with one dummy window.
 
 **Classes ("everything").** 117 classes: 1–132 minus {2, 16, 18, 20, 21, 23, 24, 25, 26, 27, 128, 129, 130, 131,
-132}. Names from the release's `metadata.json`.
+132}. Names from the release's `metadata.json`. The excluded ids are parents split into parts (2 kidney, 20 lung,
+21 bone), tumour classes (future add-on, see section 15), and overlapping or rare classes (16 prostate or uterus,
+18 rectum, 25 hepatic vessel, 131 vertebrae L6, 132 airway).
 
 **Preprocessing, copied exactly from the release (`vista3d_pipeline.py`):**
 1. Resample to 1.5 mm, bilinear, on raw HU (`Spacingd`, `align_corners=False`, border padding).
@@ -157,7 +159,7 @@ voxel already rules out overlaps.
 
 ## 8. Handover to meshing
 
-Proposed agreement (the user confirms it with the meshing team member before step 7):
+Agreed with the meshing team member:
 
 - `labels.nii` (or `.nii.gz` at level 1): uint16 label map, 0 = background, on exactly the grid (shape,
   spacing, origin, direction) of the job's `ct.nii`. Written with SimpleITK; nibabel's `image.affine` gives RAS
@@ -214,6 +216,11 @@ tools/benchmark/    step 4 and step 8 scripts (score against expert labels and r
 
 ## 13. Build steps
 
+Detailed brief per step (one issue each): [0](steps/step-0-dependencies.md), [1](steps/step-1-upload-to-ct.md),
+[2](steps/step-2-labels-and-engine-interface.md), [3](steps/step-3-nv-segment-ct-engine.md),
+[4](steps/step-4-equivalence.md), [5](steps/step-5-post-processing.md), [6](steps/step-6-addons.md),
+[7](steps/step-7-new-job-wiring.md).
+
 | Step | Work | Tests / checks |
 |---|---|---|
 | 0 | Dependencies, extras, weights download; smoke script: device, float64, 3D `grid_sample`, fp16/bf16, one run | Run by the user on the Mac, the Arc 140V, the RTX 5060 laptop and cream (Turing GPU, needed for step 4); disk sizes for the install note |
@@ -264,7 +271,39 @@ TensorRT (NVIDIA) / OpenVINO (Intel) runtimes, to revisit only if the step 0 tim
 - Hardware-report endpoint.
 - RTX Spark / Windows on Arm (CUDA PyTorch is nightly-only there; SimpleITK, scikit-image, TotalSegmentator Arm
   builds unconfirmed). Not a target.
-- Lesion clicks.
+- Lesion clicks and tumour classes (below).
 - **Blocking upload reading.** `/new-job` is `async def`; reading the CT inside it blocks the event loop, so every
   other request (including `/job-status` polls) waits until the upload is read. Whoever owns the server runtime
   should move that work onto a worker thread.
+
+### Tumour classes (future add-on)
+
+NV-Segment-CT has seven tumour and lesion classes that its automatic "everything" mode leaves out. They are still
+in the same model and weights, so adding them needs no new model download. Not built now; recorded so a later
+add-on can pick them up.
+
+| Id | Class | Organ it sits in (shared name, for `parent`) |
+|---|---|---|
+| 23 | lung tumor | lungs (lobes 28–32) |
+| 24 | pancreatic tumor | pancreas (4) |
+| 26 | hepatic tumor | liver (1) |
+| 27 | colon cancer primaries | colon (62) |
+| 128 | bone lesion | bones (vertebrae, ribs, sacrum, …) |
+| 129 | kidney mass | right / left kidney (5 / 14) |
+| 130 | liver tumor | liver (1) |
+
+The release does not say why they are excluded. Most likely: running them on every scan would mark false lesions
+in healthy patients, and they were intended for prompting.
+
+Two ways the release supports, to be decided when the add-on is planned:
+- **Label prompt (automatic):** ask the model for a tumour class by id (`label_prompt`), e.g. only when the
+  matching organ toggle is on, possibly limited to that organ's crop. Same windows and engine as the base run.
+  The release accepts a label prompt without points only for 23, 24, 26, 27 and 128; **129 kidney mass and
+  130 liver tumor need point clicks** (`check_prompts_format` rejects 16, 18, 129, 130, 131 without points).
+- **Point clicks (interactive):** the user clicks the lesion (`points`, `point_labels`); one object per request,
+  and kidney / lung / bone ids (2, 20, 21) cannot be combined with points. The prototype measured this on an M4:
+  Dice 0.703 after 8 clicks over 28 tumours, about 40 s per click, using the generic zero-shot lesion class (133).
+
+Open when planned: which classes and when they run, whether a tumour overwrites its organ or is kept separately
+(`parent` in `labels.json` already allows it), accuracy checks (MSD liver, pancreas, lung, colon; KiTS23 tumour),
+and the API change for the toggle or clicks.
