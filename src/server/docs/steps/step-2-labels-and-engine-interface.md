@@ -69,7 +69,15 @@ Fix the three contracts the rest of the engine plugs into, so the design stays m
 
 - `ENGINES`: `SegmentationModel` → engine class. One entry now: `nv-segment-ct` → the NV-Segment-CT engine
   (a stub until step 3, so this step's tests run without weights).
-- `ADDONS`: add-on name → runner. Two entries, `kidney` and `liver`, as stubs until step 6.
+- `ADDONS`: add-on name → `AddOn` class. Two entries, `kidney` and `liver`, as stubs until step 6; dictionary
+  order is the run order (kidney, then liver).
+- `AddOn` interface (settled 2026-11-27, open question 5), mirroring `Engine`:
+  - `prepare(device) -> bool`: at startup, download weights if missing and keep the device; `False` when unavailable
+    (extra not installed). Loads no model: add-on models load on each call.
+  - `run(ct, label_map) -> label_map | None`: the merged label map, or `None` when skipped (organ missing or tiny).
+    A failure raises; the pipeline catches it, logs it and marks the add-on failed, so no add-on can fail the job.
+  - `describe()`: TotalSegmentator version, task id and settings, for `run.json`.
+  - No timer: the pipeline times each add-on as one stage (`addon kidney`).
 - A new base model later = one engine file + one table entry; nothing else changes.
 
 ### 2.5 `SegmentationModel` enum
@@ -108,6 +116,9 @@ Fix the three contracts the rest of the engine plugs into, so the design stays m
 4. **When the enum change lands:** settled 2026-11-27: together with the add-on form fields in step 7, so the
    client team gets one API change. Until then the three `ts-specialist-*` values stay in `SegmentationModel`
    with no engine, and the lookup test skips them by name; step 7 removes them and that exception.
+5. **Add-on runner shape:** settled 2026-11-27: an `AddOn` class like `Engine` (`prepare`, `run`, `describe`);
+   `run` returns `None` when skipped and raises when it fails, the pipeline catches and records both; no timer
+   passed in, each add-on is one stage.
 
 ## Done when
 

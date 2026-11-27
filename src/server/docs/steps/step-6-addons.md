@@ -46,6 +46,10 @@ result into the base label map by a fixed rule. A failing add-on never fails the
 
 ## Work, in stages
 
+Each add-on is an `AddOn` class (step 2, settled 2026-11-27): `prepare(device)` at startup (6.1), `run(ct,
+label_map)` returns the merged map or `None` when skipped (6.3–6.6), `describe()` for `run.json`. `run` raises on
+failure; the pipeline catches it, logs it and marks the add-on failed (6.5), and times each add-on (6.7).
+
 ### 6.1 Startup
 
 - If `totalsegmentator` imports: set its home folder (open question 1) and download the weights for tasks 8 and 789
@@ -79,7 +83,8 @@ result into the base label map by a fixed rule. A failing add-on never fails the
 - Call `nnUNet_predict_image` with: the CT image, the task id, trainer, model, fold, resampling from the table, the
   mask as `crop`, the margin as `crop_addon`, `nr_threads_resampling=1`, `nr_threads_saving=1`, the device, quiet.
   It returns the add-on's labels on the CT grid (it undoes its own crop).
-- Wrap the call: any exception → log, mark the add-on as failed in the job's record, continue with the base map.
+- Any exception propagates out of `run`; the pipeline logs it, marks the add-on as failed in the job's record and
+  continues with the base map.
 - On XPU: on an exception, retry once on the CPU before giving up.
 
 ### 6.6 Merge
@@ -91,7 +96,7 @@ result into the base label map by a fixed rule. A failing add-on never fails the
 
 ### 6.7 Timing and RAM
 
-- Each add-on's time recorded as its own stage.
+- Each add-on's time recorded as its own stage by the pipeline (`addon kidney`, `addon liver`).
 - RAM script (`tools/`): runs one add-on on one scan and records the **real** peak RAM of the whole process tree
   (shared memory counted once), for step 6's check.
 
