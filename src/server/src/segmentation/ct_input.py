@@ -21,8 +21,9 @@ DRIVE = re.compile(r"^[A-Za-z]:")
 # Errors zipfile raises for a damaged, encrypted or unsupported archive.
 ZIP_ERRORS = (zipfile.BadZipFile, zlib.error, EOFError, RuntimeError, NotImplementedError)
 
-MODALITY, POSITION, ORIENTATION = "0008|0060", "0020|0032", "0020|0037"
+MODALITY, POSITION, ORIENTATION, FRAMES = "0008|0060", "0020|0032", "0020|0037", "0028|0008"
 SPACING_TOLERANCE = 0.01  # fraction of the slice spacing
+GZIP_MAGIC = b"\x1f\x8b"
 
 
 class UploadError(Exception):
@@ -40,7 +41,7 @@ def read_upload(
             image = read_dicom(folder)
 
     if file_type == FileType.nifti:
-        ...
+        image = read_nifti(file)
 
     raise NotImplementedError
 
@@ -94,6 +95,9 @@ def read_dicom(folder: Path) -> sitk.Image:
         if modality != "CT":
             raise UploadError(f"The DICOM series is '{modality}', not CT")
         if len(files) < 2:
+            if first.HasMetaDataKey(FRAMES) and int(first.GetMetaData(FRAMES).strip() or 1) > 1:
+                # Enhanced (multi-frame) DICOM: not supported yet (plan section 15, decided 2026-11-27).
+                raise UploadError("Single-file DICOM scans aren't supported; export the scan as one file per slice")
             raise UploadError("The DICOM series has only one slice; a 3D CT scan is needed")
         reader = sitk.ImageSeriesReader()
         reader.SetFileNames(check_slices(files))
@@ -150,6 +154,35 @@ def check_slices(files: list[str]) -> list[str]:
     if np.any(sideways > SPACING_TOLERANCE * spacing):
         raise UploadError("The DICOM series has a gantry tilt, which is not supported")
     return [files[i] for i in order]
+
+
+def read_nifti(file: BinaryIO) -> sitk.Image:
+    """One NIfTI file (.nii or .nii.gz, told apart by content) as a 3D image; 4D keeps the first time point."""
+    file.seek(0)
+    suffix = ".nii.gz" if file.read(2) == GZIP_MAGIC else ".nii"
+    file.seek(0)
+    with tempfile.TemporaryDirectory(prefix="holo-upload-") as temp:
+        path = Path(temp) / f"upload{suffix}"
+        with path.open("wb") as out:
+            shutil.copyfileobj(file, out)  # SimpleITK reads from a path; streamed, not held in memory
+        try:
+            image = sitk.ReadImage(str(path), imageIO="NiftiImageIO")  # fails unless the content is NIfTI
+        except RuntimeError as error:
+            raise UploadError("The file is not a NIfTI file or is damaged") from error
+    if image.GetNumberOfComponentsPerPixel() != 1:
+        raise UploadError("The NIfTI file is not a grey-level scan")
+    if image.GetDimension() == 4:
+        size = image.GetSize()
+        if size[3] > 1:
+            log.info("NIfTI: 4D with %d time points, using the first", size[3])
+        extract = sitk.ExtractImageFilter()
+        extract.SetSize([*size[:3], 0])
+        extract.SetIndex([0, 0, 0, 0])
+        extract.SetDirectionCollapseToStrategy(extract.DIRECTIONCOLLAPSETOSUBMATRIX)  # keep the 3D orientation
+        image = extract.Execute(image)
+    if image.GetDimension() != 3 or min(image.GetSize()) < 2:
+        raise UploadError("The NIfTI file is not a 3D scan")
+    return image
 
 
 def header(path: str) -> sitk.ImageFileReader:
