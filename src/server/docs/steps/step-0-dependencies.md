@@ -20,7 +20,8 @@ smoke check that proves the GPU can do what the engine needs. Nothing about segm
 - Python **3.14** (`.python-version` already says 3.14); 3.13 is the fallback if a package won't install.
 - **Torch 2.15 pinned on every platform.** Mac only gets 2.15 when uv resolves for **macOS 15**; older macOS is not
   supported (plan section 10).
-- Install options (uv extras): **`cuda`** (PyTorch `cu128` index; the RTX 50 series needs CUDA 12.8+) and
+- Install options (uv extras): **`cuda`** (PyTorch `cu132` index, decided 2026-11-27: torch 2.15 has no `cu128`
+  build; CUDA 13 needs NVIDIA driver 580+; the RTX 50 series needs CUDA 12.8+, so 13.2 is fine) and
   **`xpu`** (Intel Arc). Plain `uv sync` on the Mac (MPS). A short note says which command each machine uses; the
   installer team picks it up from there. No `--torch-backend` (that flag exists only for `uv pip`, not `uv sync`).
 - **`addons` extra** for TotalSegmentator **2.18.0** (pulls nnU-Net v2 2.8.1). Optional; the server works without it.
@@ -44,7 +45,7 @@ Add to the base dependencies (exact pins chosen when the lock resolves; meshing'
 | Package | Why |
 |---|---|
 | `torch==2.15.*` | the network; CPU/MPS build from PyPI by default |
-| `monai` (1.6.x) | `vista3d132`, the geometry helpers used by preprocessing, `Spacingd` fallback |
+| `monai==1.6.1` | `vista3d132`, the geometry helpers used by preprocessing, `Spacingd` fallback |
 | `einops` | imported by MONAI's VISTA3D code |
 | `SimpleITK` | DICOM reading, CT grid, nearest-neighbour mapping back, writing `labels.nii` |
 | `safetensors` | reading `model.safetensors` |
@@ -56,12 +57,16 @@ Extras:
 
 | Extra | Contents |
 |---|---|
-| `cuda` | `torch` from the PyTorch `cu128` index |
-| `xpu` | `torch` from the PyTorch `xpu` index (`2.15.0+xpu`, Windows and Linux) |
+| `cuda` | `torch` from the PyTorch `cu132` index (`2.15.0+cu132`) |
+| `xpu` | `torch` and `triton-xpu` from the PyTorch `xpu` index (`2.15.0+xpu`, Windows and Linux) |
 | `addons` | `TotalSegmentator==2.18.0` |
 
 uv configuration:
-- Two explicit indexes (`cu128`, `xpu`) and `[tool.uv.sources]` mapping `torch` to each index by extra.
+- Two explicit indexes (`cu132`, `xpu`) and `[tool.uv.sources]` mapping `torch` to each index by extra.
+  `triton-xpu` (needed by the XPU torch, only on PyTorch's index) is listed in the `xpu` extra and mapped to the
+  `xpu` index too, because an explicit index only serves the packages mapped to it.
+- The extras must be written in `[project.optional-dependencies]` by hand before `uv lock`: uv rejects a source
+  that names an extra that doesn't exist yet, so `uv add --optional` can't create them.
 - `cuda` and `xpu` declared as **conflicting** extras, so the lock holds both variants.
 - The macOS target set to 15 so the lock picks torch 2.15 for Mac. Check which mechanism works with uv 0.13 (a
   uv setting or `MACOSX_DEPLOYMENT_TARGET=15.0` when locking) and write it in the README.
@@ -71,7 +76,18 @@ uv configuration:
 
 - A small function that downloads the three files of the pinned revision (`model.safetensors`, `metadata.json`,
   the licence) with `huggingface_hub`, checks the safetensors file opens, and returns their paths.
-- Where the files live, and when the download runs, are open questions (below).
+- **Where (decided 2026-11-27, seamless for the installer):** a folder the server owns, set by an environment
+  variable, not the Hugging Face cache. Files are downloaded straight into it (`hf_hub_download(local_dir=...)`), so
+  an installer can ship them pre-filled, or point the variable at a shared copy, and the server finds them with no
+  network. The variable's name and its default folder are open question 1.
+- **When (decided 2026-11-27, seamless for clients):** at server startup, only if a file is missing. The files are
+  checked and loaded before the server accepts requests, so clients never see a half-ready server.
+  - The first start downloads 872 MB (a few minutes); later starts don't touch the network.
+  - Missing files and no network → the server refuses to start with a message naming the folder and the files.
+  - A download that is interrupted leaves no half-written file in place (`huggingface_hub` writes to a temporary
+    file and renames it when complete), and the next start resumes it.
+  - The same function is callable on its own (e.g. `uv run python -m segmentation.weights`), so an installer or a
+    machine without network at runtime can fetch the files ahead of time.
 - Weights for the add-ons are **not** downloaded here; that is step 6 ("downloaded at startup if the extra is
   installed").
 
@@ -101,7 +117,7 @@ Each check reports pass / fail / not applicable and never stops the others.
 ### 0.4 README
 
 - Install command per machine (Mac, Windows RTX, Windows Arc, Linux cream), with and without `addons`.
-- Minimum macOS 15; NVIDIA driver new enough for CUDA 12.8.
+- Minimum macOS 15; NVIDIA driver 580 or newer (CUDA 13).
 - How to run the smoke script.
 - Disk sizes from 0.3.
 
@@ -120,7 +136,7 @@ Each check reports pass / fail / not applicable and never stops the others.
 | Mac (M4) | `uv sync` then the smoke script | JSON report |
 | Arc 140V (Windows) | `uv sync --extra xpu` then the smoke script | JSON report |
 | RTX 5060 laptop (Windows) | `uv sync --extra cuda` then the smoke script | JSON report |
-| cream (Linux) | `uv sync --extra cuda` then the smoke script | JSON report; confirms torch 2.15 `cu128` still runs on Turing (compute 7.5), needed for step 4 |
+| cream (Linux) | `uv sync --extra cuda` then the smoke script | JSON report; confirms torch 2.15 `cu132` runs on Turing (compute 7.5) with cream's driver (needs 580+; check `nvidia-smi` first), needed for step 4 |
 
 About 30 minutes per machine, mostly the 2–3 GB torch download.
 
@@ -140,12 +156,18 @@ About 30 minutes per machine, mostly the 2–3 GB torch download.
 
 ## Open questions (settle in the issue)
 
-1. **Where the weights live.** The Hugging Face cache (default, shared with other tools), or a folder the server
-   owns, set by an environment variable (easier for the installer to ship or pre-fill).
-2. **When the download runs.** At server startup if missing, or only through an explicit setup command (startup
-   never touches the network).
-3. **Exact MONAI pin.** The demo ran 1.6.1; 1.6.2 was checked here. Pin to one so step 4's comparison isn't
-   affected by a MONAI change.
+Settled 2026-11-27: the weights live in a folder the server owns, and they are downloaded at startup only if
+missing (0.2).
+
+1. **Variable name and default folder.** E.g. `HOLO_MODELS_DIR`. The default could be a per-user data folder
+   (`~/Library/Application Support/…` on macOS, `%LOCALAPPDATA%\…` on Windows), which is writable even when the
+   server is installed somewhere read-only like `Program Files`. Or it could be `models/` next to the server code
+   (simplest for development, but may not be writable once installed). Step 6's `TOTALSEG_HOME_DIR` and step 7's job
+   folders could default under the same folder.
+MONAI pinned to **1.6.1** (decided 2026-11-27): the demo's version, so step 4 compares like for like. 1.6.2 was
+diffed: the code we use (`vista3d.py`, `segresnet_ds.py`, `ScaleIntensityRange`) is identical, and its resampling
+fix only applies to the compiled / integer-mode path we don't use. Moving to 1.6.2 later is a one-line PR after
+step 4 passes.
 
 ## Done when
 

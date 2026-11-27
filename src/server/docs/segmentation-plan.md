@@ -185,7 +185,7 @@ Agreed with the meshing team member:
   available); NVIDIA RTX 5060 (8 GB VRAM, 32 GB RAM) and up;
   Apple Silicon Macs on macOS 15 or later.
 - Python 3.14 (3.13 fallback). Torch 2.15 pinned on every platform.
-- uv extras: `cuda` (PyTorch `cu128` index; RTX 50 needs CUDA 12.8+) and `xpu`; plain `uv sync` on Mac.
+- uv extras: `cuda` (PyTorch `cu132` index: torch 2.15 has CUDA builds only for 13.2 and 13.4, and 13.2 matches PyPI's own Linux build; needs NVIDIA driver 580+) and `xpu`; plain `uv sync` on Mac. Changed from `cu128` on 2026-11-27 (`cu128` stops at torch 2.11).
   The installer team picks the command; a short note says which one per machine. uv's macOS target set to 15.
 - The server must run natively on Windows and macOS.
 
