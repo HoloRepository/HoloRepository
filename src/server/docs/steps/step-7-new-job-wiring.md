@@ -18,7 +18,8 @@ upload), poll the job's status, and find `labels.nii` + `labels.json` on disk fo
 ## Decisions that apply (from the plan)
 
 **API (section 2):**
-- `model` names the base model only: `nv-segment-ct` (the `ts-specialist-*` values are gone, here or in step 2).
+- `model` names the base model only: `nv-segment-ct`. The `ts-specialist-*` values are removed here, together with
+  the add-on form fields (decided 2026-11-27, step 2 open question 4); drop step 2's lookup-test exception for them.
 - New boolean form fields **`kidney_addon`** and **`liver_addon`**, default `false`.
 - Bad uploads return **400 from the request itself**: the CT is unzipped and read before the job id is returned.
 - Regenerate `API contract.md` and `openapi.json` (`uv run python scripts/generate_contract.py`); tell the client
@@ -76,7 +77,7 @@ scans fail with a clear message.
 ### 7.4 `pipeline.py`: one job end to end
 
 1. Write `ct.nii` (step 1's `write_ct`).
-2. `segment(ct)` with the engine from `ENGINES[model]`.
+2. `segment(ct, timer)` with the engine from `ENGINES[model]` (the job's shared stage timer).
 3. Add-ons from `ADDONS` for each toggle (step 6); a failed add-on is recorded, the job continues.
 4. `remove_stray_pieces` (step 5).
 5. Write `labels.nii` on the CT grid and `labels.json` (`table_for` the ids present, step 2).

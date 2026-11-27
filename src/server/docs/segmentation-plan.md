@@ -54,11 +54,14 @@ labels.nii (uint16, CT grid) + labels.json  → handed to meshing
 
 ## 4. Engine and model choice
 
-- Interface: `segment(ct) -> (label_map on the CT grid, {id: name})`.
+- Interface: `segment(ct, timer) -> (label_map on the CT grid, {id: name})`. `timer` is a stage timer the engine
+  records its stages on; the pipeline shares it, and timings go to the log and `run.json` only (decided 2026-11-27).
 - Lookup table: `SegmentationModel` value → engine. Second table: add-on name → add-on runner.
 - Add-ons ask for organs by **shared name**, so any future base model works with them.
 - One shared label list (`labels.json` in the repo): NV-Segment-CT's own ids kept as they are (1–132), new
   structures above 132, liver vessels reuse NV-Segment-CT's hepatic-vessel id 25. Each entry: id, name, parent.
+  Names exactly as in NV-Segment-CT's `metadata.json`. Parents (decided 2026-11-27): kidney cysts → their kidney
+  (116 → 14, 117 → 5), hepatic vessel → liver (25 → 1), everything else `null`.
 
 ## 5. NV-Segment-CT engine
 

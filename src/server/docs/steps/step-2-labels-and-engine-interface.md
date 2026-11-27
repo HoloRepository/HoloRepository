@@ -20,7 +20,7 @@ Fix the three contracts the rest of the engine plugs into, so the design stays m
 
 ## Decisions that apply (from the plan)
 
-- Interface: `segment(ct) -> (label_map on the CT grid, {id: name})`.
+- Interface: `segment(ct, timer) -> (label_map on the CT grid, {id: name})` (timer added 2026-11-27).
 - Lookup table: `SegmentationModel` value → engine. Second table: add-on name → add-on runner.
 - Add-ons and post-processing ask for organs by **shared name**, so any future base model works with them.
 - One shared label list, `labels.json` in the repo:
@@ -41,8 +41,8 @@ Fix the three contracts the rest of the engine plugs into, so the design stays m
 ### 2.1 `labels.json` (generated, committed)
 
 - A small generator script (in `tools/`, not shipped) reads the pinned `metadata.json` and writes
-  `src/segmentation/labels.json`: ids 1–132 with NV-Segment-CT's names, `parent` filled where agreed (open
-  question 1).
+  `src/segmentation/labels.json`: ids 1–132 with NV-Segment-CT's names, `parent` set for 116 → 14, 117 → 5 and
+  25 → 1, otherwise `null` (open question 1).
 - Background (0) is implicit and not listed.
 - The file is committed so the server never needs `metadata.json` to know names, and so reviews see every change.
 
@@ -58,11 +58,12 @@ Fix the three contracts the rest of the engine plugs into, so the design stays m
 
 - A minimal protocol every base model implements:
   - `load(device)`: load weights, warm up. Called once at startup.
-  - `segment(ct) -> (label_map, {id: name})`: `ct` is the standard CT from step 1 (SimpleITK, Int16 HU);
+  - `segment(ct, timer) -> (label_map, {id: name})`: `ct` is the standard CT from step 1 (SimpleITK, Int16 HU);
     `label_map` is a uint16 SimpleITK image on exactly the CT's grid; the dictionary lists the ids the engine can
     output, using shared ids and names.
   - A short description for `run.json` (engine name, model revision, settings), used in step 7.
-- How per-stage timings get out of the engine is open question 3.
+- `timer`: a small stage timer (`with timer("preprocessing"): ...`) the engine records its stages on; the
+  pipeline uses the same one for its own stages and writes them to the log and `run.json` (open question 3).
 
 ### 2.4 Lookup tables
 
@@ -73,8 +74,8 @@ Fix the three contracts the rest of the engine plugs into, so the design stays m
 
 ### 2.5 `SegmentationModel` enum
 
-- Remove `ts-specialist-kidney`, `ts-specialist-liver`, `ts-specialist-head-n-neck`; keep `nv-segment-ct`.
-- When this API change lands is open question 4.
+- Unchanged in this step: removing `ts-specialist-kidney`, `ts-specialist-liver`, `ts-specialist-head-n-neck` moves
+  to step 7, together with the add-on form fields (open question 4).
 
 ## Tests (`tests/segmentation/test_labels.py`, `test_engines.py`, fast)
 
@@ -95,15 +96,18 @@ Fix the three contracts the rest of the engine plugs into, so the design stays m
 
 ## Open questions (settle in the issue)
 
-1. **Which parents to set.** Minimum: kidney cysts → their kidney (116 → 14, 117 → 5), as the handover example
-   says. Also liver vessels (25) → liver (1)? Lung lobes and vertebrae have no present parent (20 lung and 21 bone
-   are never output), so leave them `null`?
-2. **Name style.** Keep NV-Segment-CT's names exactly (`esophagus`, `inferior vena cava`), or a snake_case key
-   (`esophagus`, `inferior_vena_cava`) plus the readable name? Keeping them exact is the least code.
-3. **Stage timings.** Pass a small timer object into `segment` that the engine records stages on
-   (preprocessing, inference, mapping back), or have `segment` return the timings with its result.
-4. **When the enum change lands.** Here (the lookup test then covers the final enum, and the contract is
-   regenerated now), or together with the add-on form fields in step 7 (one API change for the client team).
+1. **Which parents to set:** settled 2026-11-27: kidney cysts → their kidney (116 → 14, 117 → 5) and hepatic
+   vessel → liver (25 → 1), the two add-on structures that sit inside an organ we output. Everything else `null`;
+   a parent must itself be output (lung 20 and bone 21 never are). `parent` changes no voxels: it lets meshing fill
+   or group the parent around the child (check with the meshing teammate that they read it).
+2. **Name style:** settled 2026-11-27: NV-Segment-CT's names exactly as in `metadata.json` (`inferior vena cava`),
+   no separate key.
+3. **Stage timings:** settled 2026-11-27: a small timer object passed into `segment`; the engine records its
+   stages on it (`with timer("inference"): ...`) and the pipeline records its own stages on the same timer. No API
+   change: timings go to the log and `run.json` only.
+4. **When the enum change lands:** settled 2026-11-27: together with the add-on form fields in step 7, so the
+   client team gets one API change. Until then the three `ts-specialist-*` values stay in `SegmentationModel`
+   with no engine, and the lookup test skips them by name; step 7 removes them and that exception.
 
 ## Done when
 

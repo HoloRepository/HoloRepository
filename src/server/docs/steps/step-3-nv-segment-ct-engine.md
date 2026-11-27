@@ -16,7 +16,7 @@ resolution.
 
 ## Goal
 
-`segment(ct)` takes the standard CT (step 1) and returns a uint16 label map on exactly the CT's grid plus
+`segment(ct, timer)` takes the standard CT (step 1) and returns a uint16 label map on exactly the CT's grid plus
 `{id: name}` for the 117 classes, matching the demo's reference maps (checked in step 4), using at most one row of
 windows of GPU memory, on CUDA, XPU, MPS and the CPU.
 
