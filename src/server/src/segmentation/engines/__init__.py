@@ -1,22 +1,15 @@
-from abc import ABC, abstractmethod
+"""Base segmentation models: the Engine interface and the lookup table from the API's `model` value to an engine.
 
-import SimpleITK as sitk
-import torch
+A new base model = one package here (engine + its own model files) and one ENGINES entry.
+"""
 
-from segmentation.timing import StageTimer
+from models import SegmentationModel
+from segmentation.engines.base import Engine
+from segmentation.engines.nv_segment_ct import NVSegmentCT
 
+__all__ = ["ENGINES", "Engine"]
 
-class Engine(ABC):
-    """A base segmentation model. Created and loaded once at startup, then runs every job."""
-
-    @abstractmethod
-    def load(self, device: torch.device) -> None:
-        """Load the weights onto the device and warm up."""
-
-    @abstractmethod
-    def segment(self, ct: sitk.Image, timer: StageTimer) -> tuple[sitk.Image, dict[int, str]]:
-        """Standard CT (Int16 HU) → uint16 label map on exactly the CT's grid, and {id: name} it can output."""
-
-    @abstractmethod
-    def describe(self) -> dict:
-        """Engine name, model revision and settings, for the job's run.json."""
+# The ts-specialist-* values have no engine, removed from SegmentationModel.
+ENGINES: dict[SegmentationModel, type[Engine]] = {
+    SegmentationModel.nv_segment_ct: NVSegmentCT,
+}
