@@ -1,0 +1,75 @@
+[project]
+name = "server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi[standard]>=0.163.1",
+    "nibabel>=5.4.2",
+    "numpy>=2.5.4",
+    "pwdlib[argon2]>=0.4.2",
+    "pyjwt>=2.15.1",
+    "python-multipart>=0.0.34",
+    "scikit-image>=0.26.0",
+    "trimesh>=5.1.1",
+    "torch==2.15.*",
+    "monai==1.6.1",
+    "einops>=0.8.2",
+    "simpleitk>=2.5.8",
+    "safetensors>=0.8.0",
+    "huggingface-hub>=2.5.0",
+]
+
+[project.optional-dependencies]
+addons = [
+    "totalsegmentator==2.18.0",
+]
+cuda = [
+    "torch==2.15.*",
+]
+xpu = [
+    "torch==2.15.*",
+    "triton-xpu ; sys_platform != 'darwin'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+[tool.uv]
+conflicts = [[{ extra = "cuda" }, { extra = "xpu" }]]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu132", extra = "cuda" },
+  { index = "pytorch-xpu", extra = "xpu" },
+]
+triton-xpu = [
+  { index = "pytorch-xpu", extra = "xpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-xpu"
+url = "https://download.pytorch.org/whl/xpu"
+explicit = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint.per-file-ignores]
+# Each smoke check must report its failure and never stop the others.
+"tools/smoke.py" = ["BLE001"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = ["slow: needs the real model files (run with -m slow)"]
+addopts = "-m 'not slow'"
