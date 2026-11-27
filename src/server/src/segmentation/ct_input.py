@@ -24,6 +24,7 @@ ZIP_ERRORS = (zipfile.BadZipFile, zlib.error, EOFError, RuntimeError, NotImpleme
 MODALITY, POSITION, ORIENTATION, FRAMES = "0008|0060", "0020|0032", "0020|0037", "0028|0008"
 SPACING_TOLERANCE = 0.01  # fraction of the slice spacing
 GZIP_MAGIC = b"\x1f\x8b"
+INT16_MIN, INT16_MAX = -32768, 32767
 
 
 class UploadError(Exception):
@@ -39,11 +40,9 @@ def read_upload(
     if file_type == FileType.dicom:
         with extracted_zip(file) as folder:
             image = read_dicom(folder)
-
-    if file_type == FileType.nifti:
+    else:
         image = read_nifti(file)
-
-    raise NotImplementedError
+    return standardise(image)
 
 
 @contextmanager
@@ -183,6 +182,19 @@ def read_nifti(file: BinaryIO) -> sitk.Image:
     if image.GetDimension() != 3 or min(image.GetSize()) < 2:
         raise UploadError("The NIfTI file is not a 3D scan")
     return image
+
+
+def standardise(image: sitk.Image) -> sitk.Image:
+    """Int16 HU, rounded and clipped to the Int16 range; size, spacing, origin and direction unchanged."""
+    if image.GetPixelID() == sitk.sitkInt16:
+        return image
+    if image.GetPixelID() in (sitk.sitkFloat32, sitk.sitkFloat64):
+        image = sitk.Round(image)  # float NIfTI: changes values by under 0.5 HU
+    stats = sitk.MinimumMaximumImageFilter()
+    stats.Execute(image)
+    if stats.GetMinimum() < INT16_MIN or stats.GetMaximum() > INT16_MAX:
+        log.warning("CT values %g to %g clipped to the Int16 range", stats.GetMinimum(), stats.GetMaximum())
+    return sitk.Clamp(image, sitk.sitkInt16, INT16_MIN, INT16_MAX)
 
 
 def header(path: str) -> sitk.ImageFileReader:
