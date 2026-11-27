@@ -52,7 +52,7 @@ def extracted_zip(file: BinaryIO) -> Generator[Path]:
     The whole upload is rejected if any entry is a symlink or would land outside the folder.
     """
     file.seek(0)
-    if not zipfile.is_zipfile(file):  
+    if not zipfile.is_zipfile(file):
         raise UploadError("The DICOM upload is not a ZIP file")
     file.seek(0)
     with tempfile.TemporaryDirectory(prefix="holo-upload-") as temp:
