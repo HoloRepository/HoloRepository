@@ -130,8 +130,8 @@ until `done`, open `labels.nii` over `ct.nii` in a viewer (e.g. NiiVue) and chec
 
 ## Open questions (settle in the issue)
 
-1. **Where job folders live:** a folder set by an environment variable (default under the server's data folder).
-   Coordinate with whoever builds `/records` and `/files`.
+1. ~~Where job folders live~~ Settled 2026-11-27: `$HOLO_DATA_DIR/jobs/<job id>/` (one data root, step 0). Tell
+   whoever builds `/records` and `/files`, since they read from there.
 2. **When a job is `done`:** after `labels.nii` is written (meshing then runs as its own stage and job), or only
    after meshing has also finished (meshing hooks into `pipeline.py`).
 3. **Who owns `/job-status`:** wired here (needed for the status tests), or by whoever owns the rest of the job

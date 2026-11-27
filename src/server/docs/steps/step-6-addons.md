@@ -138,8 +138,8 @@ add-ons).
 
 ## Open questions (settle in the issue)
 
-1. **Where TotalSegmentator's weights live** (`TOTALSEG_HOME_DIR`): next to NV-Segment-CT's weights (same answer as
-   step 0's question 1), or TotalSegmentator's default home folder.
+1. ~~Where TotalSegmentator's weights live~~ Settled 2026-11-27: the server sets `TOTALSEG_HOME_DIR` to
+   `$HOLO_DATA_DIR/totalsegmentator` (one data root, step 0).
 2. **"Tiny" threshold** for skipping: e.g. under 10 mL for the liver, under 5 mL for both kidneys together, or
    simply "absent".
 3. **Liver tumours from the liver add-on.** `liver_vessels` outputs two labels: `liver_vessels` (1) and

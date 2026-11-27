@@ -79,7 +79,11 @@ uv configuration:
 - **Where (decided 2026-11-27, seamless for the installer):** a folder the server owns, set by an environment
   variable, not the Hugging Face cache. Files are downloaded straight into it (`hf_hub_download(local_dir=...)`), so
   an installer can ship them pre-filled, or point the variable at a shared copy, and the server finds them with no
-  network. The variable's name and its default folder are open question 1.
+  network.
+  - Folder (decided 2026-11-27): `$HOLO_DATA_DIR/models/`. `HOLO_DATA_DIR` defaults to the per-user data folder:
+    `~/Library/Application Support/HoloRepository` on macOS, `%LOCALAPPDATA%\HoloRepository` on Windows
+    (`~/.local/share/HoloRepository` on Linux, for cream). Steps 6 and 7 put `totalsegmentator/` and `jobs/` under
+    the same root. For development, set it to a folder outside OneDrive (e.g. `~/holo-data`).
 - **When (decided 2026-11-27, seamless for clients):** at server startup, only if a file is missing. The files are
   checked and loaded before the server accepts requests, so clients never see a half-ready server.
   - The first start downloads 872 MB (a few minutes); later starts don't touch the network.
@@ -156,14 +160,10 @@ About 30 minutes per machine, mostly the 2–3 GB torch download.
 
 ## Open questions (settle in the issue)
 
-Settled 2026-11-27: the weights live in a folder the server owns, and they are downloaded at startup only if
-missing (0.2).
+All settled 2026-11-27:
 
-1. **Variable name and default folder.** E.g. `HOLO_MODELS_DIR`. The default could be a per-user data folder
-   (`~/Library/Application Support/…` on macOS, `%LOCALAPPDATA%\…` on Windows), which is writable even when the
-   server is installed somewhere read-only like `Program Files`. Or it could be `models/` next to the server code
-   (simplest for development, but may not be writable once installed). Step 6's `TOTALSEG_HOME_DIR` and step 7's job
-   folders could default under the same folder.
+- The weights live in `$HOLO_DATA_DIR/models/`; `HOLO_DATA_DIR` defaults to the per-user data folder (0.2).
+- They are downloaded at startup only if missing (0.2).
 MONAI pinned to **1.6.1** (decided 2026-11-27): the demo's version, so step 4 compares like for like. 1.6.2 was
 diffed: the code we use (`vista3d.py`, `segresnet_ds.py`, `ScaleIntensityRange`) is identical, and its resampling
 fix only applies to the compiled / integer-mode path we don't use. Moving to 1.6.2 later is a one-line PR after

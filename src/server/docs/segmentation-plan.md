@@ -188,6 +188,11 @@ Agreed with the meshing team member:
 - uv extras: `cuda` (PyTorch `cu132` index: torch 2.15 has CUDA builds only for 13.2 and 13.4, and 13.2 matches PyPI's own Linux build; needs NVIDIA driver 580+) and `xpu`; plain `uv sync` on Mac. Changed from `cu128` on 2026-11-27 (`cu128` stops at torch 2.11).
   The installer team picks the command; a short note says which one per machine. uv's macOS target set to 15.
 - The server must run natively on Windows and macOS.
+- **Server data folder (decided 2026-11-27):** one root folder set by **`HOLO_DATA_DIR`**, defaulting to the per-user data folder (`~/Library/Application Support/HoloRepository` on macOS, `%LOCALAPPDATA%\HoloRepository` on Windows). Under it: `models/` (NV-Segment-CT, step 0),
+  `totalsegmentator/` (add-on weights, step 6) and `jobs/` (step 7). Writable without admin rights, survives
+  reinstalls, and outside the code folder (which may be cloud-synced). Every server setting uses the `HOLO_` prefix.
+  If the installer team later runs the server as a Windows service, the default may need to become a machine-wide
+  folder (`%PROGRAMDATA%`); setting `HOLO_DATA_DIR` covers that case without a code change.
 
 ## 11. Runtime
 
