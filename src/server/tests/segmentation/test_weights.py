@@ -1,5 +1,6 @@
 import pytest
 import torch
+from safetensors import SafetensorError
 from safetensors.torch import load_file, save_file
 
 from segmentation import weights
@@ -73,7 +74,7 @@ def test_damaged_weights_file_fails(folder, downloads):
     for name in weights.FILES:
         write_file(folder, name)
     (folder / weights.WEIGHTS).write_bytes(b"not a safetensors file")
-    with pytest.raises(Exception):
+    with pytest.raises(SafetensorError):
         weights.ensure_weights()
 
 

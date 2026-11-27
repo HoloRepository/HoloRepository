@@ -1,6 +1,9 @@
-import SimpleITK as sitk
-from models import FileType
 from typing import BinaryIO
+
+import SimpleITK as sitk
+
+from models import FileType
+
 
 class UploadError(Exception): 
      """Rejected upload, the message is shown to the client"""

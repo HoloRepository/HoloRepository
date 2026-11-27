@@ -20,12 +20,13 @@ direction) kept exactly. Anything unusable is rejected with a clear message that
 
 - Bad uploads return **400 from the request itself**: the CT is unzipped and read before the job id is returned.
   This step raises one error type with a user-readable message; step 7 maps it to HTTP 400.
-- **ZIP:** reject entries that escape the target folder (`../`, absolute paths); limits on total extracted size and
-  file count; an upload size limit.
-- **DICOM:** the series with the most files; `Modality` must be `CT`; non-uniform slice spacing or gantry tilt → 400.
+- **ZIP:** reject entries that escape the target folder (`../`, absolute paths). No size or file-count limits for
+  now (decided 2026-11-27, documented gap in plan section 15).
+- **DICOM:** the series with the most files (ties → lowest `SeriesInstanceUID` (always present; not meaningful, just repeatable), logged); `Modality` must be `CT`; non-uniform slice
+  spacing (slice gaps more than 1% of the spacing off even → non-uniform) or gantry tilt → 400.
 - **NIfTI:** accepted without a modality check; 4D uses the first time point; anything not 3D → 400.
 - **Output:** Int16 HU CT on the original grid, kept in memory for the job and written once as `ct.nii`
-  (uncompressed or gzip level 1). Meshing's `labels.nii` will sit on exactly this grid (section 8).
+  (uncompressed). Meshing's `labels.nii` will sit on exactly this grid (section 8).
 - Documented gap, not fixed here: `/new-job` is `async def`, so reading the upload blocks the event loop. Whoever
   owns the server runtime moves it to a worker thread.
 
@@ -48,20 +49,18 @@ direction) kept exactly. Anything unusable is rejected with a clear message that
   - has an absolute path, a drive letter, or resolves outside the folder after normalising (`..`, backslashes on
     Windows);
   - is a symlink.
-- Limits, checked while extracting (not only from the ZIP's declared sizes, which can lie): upload size, total
-  extracted bytes, number of files. Values are open questions (below).
 - Corrupt ZIP → `UploadError`.
 
 ### 1.3 DICOM series → image
 
 - Find series in every folder of the extracted tree (SimpleITK's GDCM series lookup is per folder).
-- Choose the series with the most files. Ties: open question (below).
+- Choose the series with the most files. Ties: the lowest `SeriesInstanceUID`; log which series was chosen and why.
 - Read `Modality` (0008,0060) from the chosen series' first file; anything other than `CT` → `UploadError`.
 - Read the series with SimpleITK's series reader (sorted by position; rescale slope and intercept applied, so values
   are HU).
 - Reject, with a message that says why:
-  - **non-uniform slice spacing**: positions along the slice normal differ from evenly spaced by more than a small
-    tolerance (missing slices also show up here);
+  - **non-uniform slice spacing**: positions along the slice normal differ from evenly spaced by more than 1% of
+    the slice spacing (missing slices also show up here);
   - **gantry tilt**: the step between slices is not along the slice normal from `ImageOrientationPatient`;
   - fewer than 2 slices (not 3D).
 
@@ -80,7 +79,7 @@ direction) kept exactly. Anything unusable is rejected with a clear message that
 
 ### 1.6 Write `ct.nii`
 
-- Written once per job with SimpleITK, uncompressed or gzip level 1 (open question).
+- Written once per job with SimpleITK, uncompressed.
 - Called by the pipeline in step 7; this step only provides the function.
 
 ## Tests (`tests/segmentation/test_ct_input.py`, fast, no GPU)
@@ -95,10 +94,11 @@ large is committed.
 | Series in nested folders | Found |
 | `Modality` = `MR` | `UploadError` naming the modality |
 | Missing slice / uneven spacing | `UploadError` (non-uniform spacing) |
+| Spacing off by under 1% (rounding) | Read |
+| Two series with the same file count | Lowest `SeriesInstanceUID` chosen |
 | Tilted series | `UploadError` (gantry tilt) |
 | Corrupt ZIP, non-ZIP sent as `dicom` | `UploadError` |
 | Entry with `../`, absolute path, backslash escape, symlink | `UploadError`; nothing written outside the temp folder |
-| Over the size or file-count limit (limits lowered in the test) | `UploadError` |
 | NIfTI 3D, `.nii` and `.nii.gz` | Read; geometry exact, including an oblique direction matrix |
 | NIfTI 4D | First time point |
 | NIfTI 2D | `UploadError` |
@@ -115,14 +115,13 @@ large is committed.
 
 ## Open questions (settle in the issue)
 
-1. **Limit values:** upload size, total extracted size, file count. Suggestion to discuss: sized from the largest
-   real scan you expect (a 734-slice 512 × 512 CT is about 0.4 GB of pixels), with environment variables to change
-   them per machine.
-2. **Series ties:** if two series have the same number of files, which one? (e.g. thinner slices, or reject and ask
-   the client to send one series).
-3. **`ct.nii` compression:** uncompressed (fastest to write and read, ~2 bytes per voxel) or gzip level 1 (smaller,
-   a little slower).
-4. **Spacing tolerance** for "non-uniform" (e.g. 1% of the slice spacing, or a fixed 0.01 mm).
+1. **Limit values:** settled 2026-11-27: no limits for now; documented as a gap in plan section 15.
+2. **Series ties:** settled 2026-11-27: the simplest fixed rule, lowest `SeriesInstanceUID`, logged. Either
+   candidate is usually the same anatomy (two contrast phases or two reconstructions), and clients have no screen
+   to choose a series.
+3. **`ct.nii` compression:** settled 2026-11-27: uncompressed (fastest to write and read, ~2 bytes per voxel).
+4. **Spacing tolerance:** settled 2026-11-27: 1% of the slice spacing (adapts to slice thickness; rounding never
+   triggers it, a missing slice always does).
 
 ## Done when
 

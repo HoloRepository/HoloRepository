@@ -34,7 +34,7 @@ endpoint, a real job queue and persistent storage, proper out-of-memory handling
 upload (DICOM zip | NIfTI)
   │  safe extract, pick series, checks  → 400 on failure
   ▼
-standard CT in memory (Int16 HU, original grid)  ── also written as ct.nii (uncompressed / gzip level 1)
+standard CT in memory (Int16 HU, original grid)  ── also written as ct.nii (uncompressed)
   │
   ▼  engine from lookup table: nv-segment-ct
 NV-Segment-CT
@@ -171,12 +171,13 @@ Agreed with the meshing team member:
 
 ## 9. Uploads
 
-- ZIP: reject entries that escape the target folder (`../`, absolute paths); limits on total extracted size and
-  file count; an upload size limit.
-- DICOM: the series with the most files; `Modality` must be `CT`; non-uniform slice spacing or gantry tilt → 400.
+- ZIP: reject entries that escape the target folder (`../`, absolute paths). No size or file-count limits for now
+  (decided 2026-11-27; see section 15).
+- DICOM: the series with the most files (ties → lowest `SeriesInstanceUID` (always present; not meaningful, just repeatable), logged); `Modality` must be `CT`; non-uniform slice spacing
+  (slice gaps more than 1% of the spacing off even → non-uniform) or gantry tilt → 400. Decided 2026-11-27.
 - NIfTI: accepted without a modality check; 4D uses the first time point; anything not 3D → 400.
 - Output: Int16 HU CT on the original grid, kept in memory for the job and written once as `ct.nii`
-  (uncompressed or gzip level 1).
+  (uncompressed, decided 2026-11-27).
 
 ## 10. Devices and packaging
 
@@ -237,7 +238,7 @@ Detailed brief per step (one issue each): [0](steps/step-0-dependencies.md), [1]
 | Step | Work | Tests / checks |
 |---|---|---|
 | 0 | Dependencies, extras, weights download; smoke script: device, float64, 3D `grid_sample`, fp16/bf16, one run | Run by the user on the Mac, the Arc 140V, the RTX 5060 laptop and cream (Turing GPU, needed for step 4); disk sizes for the install note |
-| 1 | Upload → standard CT | Single/multiple series, non-CT modality, 4D, 2D, corrupt zip, path-escape zip, size limits, geometry kept exactly |
+| 1 | Upload → standard CT | Single/multiple series, non-CT modality, 4D, 2D, corrupt zip, path-escape zip, geometry kept exactly |
 | 2 | Shared label list, engine interface, lookup tables | No duplicate ids or names; every engine class resolves |
 | 3 | NV-Segment-CT engine | Streaming result equals whole-volume result (both label choices); `original` inside streaming equals interpolating the whole score volume; resampling matches MONAI; mapping back on synthetic oblique data; device choice; peak GPU memory logged per scan; wide (768 × 768) and long scans run under an 8 GB cap (fail → choose a buffer bound) |
 | 4 | Equivalence test (on cream) | Ours (raw output, both label choices from one pass) vs the demo's Eval 4 label maps before clean-up: ≥ 99.9% voxel agreement on every scan; AMOS mean Dice within 0.001 of the reference and the `original` gain ≈ +0.0074; time and peak GPU memory logged. The `nvidia` reference is the release pipeline's own output, so no separate NVIDIA-pipeline environment. Mac and Arc: same comparison on a few scans (wide ones included) with reduced precision on/off, deciding precision per device. Maps on cream: `/cs/student/ug/2025/jborrajo/holorepo-gpu/engine_evals/eval4_labels/` (`baseline/` = `nvidia`, `E4_original/` = `original`; `raw/` before clean-up, `clean/` after; `manifest.csv` with SHA-256; 357 scans, none for `kits23_case_00165`) |
@@ -285,6 +286,10 @@ TensorRT (NVIDIA) / OpenVINO (Intel) runtimes, to revisit only if the step 0 tim
 - RTX Spark / Windows on Arm (CUDA PyTorch is nightly-only there; SimpleITK, scikit-image, TotalSegmentator Arm
   builds unconfirmed). Not a target.
 - Lesion clicks and tumour classes (below).
+- **Upload size limits (decided 2026-11-27: not for now).** No limit on upload size, total extracted size or
+  number of files in a ZIP. A huge upload or a ZIP bomb can fill the disk or memory. To add later: limits sized from
+  the largest real scan (a 734-slice 512 × 512 CT is about 0.4 GB of pixels), changeable per machine with `HOLO_`
+  environment variables, checked while extracting rather than from the ZIP's declared sizes.
 - **Blocking upload reading.** `/new-job` is `async def`; reading the CT inside it blocks the event loop, so every
   other request (including `/job-status` polls) waits until the upload is read. Whoever owns the server runtime
   should move that work onto a worker thread.

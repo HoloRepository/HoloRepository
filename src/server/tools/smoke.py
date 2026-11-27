@@ -103,7 +103,7 @@ def device_info(device: torch.device) -> dict:
             info["cuda_runtime"] = torch.version.cuda
             info["nvidia_driver"] = nvidia_driver()
     elif device.type == "mps":
-        chip = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True)
+        chip = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True, check=False)
         info["name"] = chip.stdout.strip() or "Apple GPU"
         info["memory_kind"] = "shared with system RAM"
         info["recommended_max_memory_gb"] = round(torch.mps.recommended_max_memory() / GB, 2)
@@ -116,7 +116,7 @@ def nvidia_driver() -> str | None:
     if not shutil.which("nvidia-smi"):
         return None
     out = subprocess.run(
-        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"], capture_output=True, text=True
+        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"], capture_output=True, text=True, check=False
     )
     return out.stdout.strip() or None
 

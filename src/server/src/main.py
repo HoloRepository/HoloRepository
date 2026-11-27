@@ -49,13 +49,11 @@ async def sign_up(
     password: Annotated[str, Form(min_length=8, max_length=128)],
 ) -> User:
     """Create an account."""
-    ...
 
 
 @app.post("/token", tags=["auth"])
 async def sign_in(form: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
     """Sign in with `username` and `password` form fields and get an access token."""
-    ...
 
 
 @app.get("/me", tags=["auth"])
@@ -82,13 +80,11 @@ async def create_job(
     Send `multipart/form-data`. For DICOM, ZIP the folder and send the ZIP as `file`;
     the server extracts it.
     """
-    ...
 
 
 @app.get("/job-status", tags=["jobs"])
 async def get_job_status(user: CurrentUser, job_id: str) -> JobStatus:
     """Get a processing job's status."""
-    ...
 
 
 # --- Records & files ---
@@ -97,7 +93,6 @@ async def get_job_status(user: CurrentUser, job_id: str) -> JobStatus:
 @app.get("/records", tags=["records"])
 async def list_records(user: CurrentUser) -> list[Record]:
     """List records. Each record links all the files that belong to one upload."""
-    ...
 
 
 @app.get(
@@ -108,4 +103,3 @@ async def list_records(user: CurrentUser) -> list[Record]:
 )
 async def download_file(user: CurrentUser, file_id: str) -> FileResponse:
     """Download a file's raw bytes."""
-    ...
